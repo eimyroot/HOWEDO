@@ -14,7 +14,7 @@ from howedo.trust_publication import (
 
 def _parse_time(value: str) -> datetime:
     try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(value)
     except ValueError as exc:
         raise argparse.ArgumentTypeError("expected ISO-8601 timestamp") from exc
     if parsed.tzinfo is None or parsed.utcoffset() != UTC.utcoffset(parsed):
