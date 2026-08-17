@@ -71,8 +71,10 @@ def evidence_refs() -> tuple[str, ...]:
     refs = ["test://langgraph-real-checkpoint"]
     if run_id := os.environ.get("GITHUB_RUN_ID"):
         refs.append(f"github-actions://run/{run_id}")
-    if sha := os.environ.get("GITHUB_SHA"):
-        refs.append(f"git://sha/{sha}")
+    if source_sha := os.environ.get("HOWEDO_SOURCE_SHA"):
+        refs.append(f"git-source://sha/{source_sha}")
+    if checkout_sha := os.environ.get("GITHUB_SHA"):
+        refs.append(f"git-checkout://sha/{checkout_sha}")
     return tuple(sorted(refs))
 
 
