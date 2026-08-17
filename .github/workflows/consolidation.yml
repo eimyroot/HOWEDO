@@ -159,6 +159,7 @@ jobs:
         python-version: ["3.12", "3.13"]
     env:
       HOWEDO_CONFORMANCE_ARTIFACT_DIR: artifacts
+      HOWEDO_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -192,6 +193,7 @@ jobs:
     env:
       HOWEDO_TEST_TEMPORAL: "1"
       HOWEDO_CONFORMANCE_ARTIFACT_DIR: artifacts
+      HOWEDO_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
