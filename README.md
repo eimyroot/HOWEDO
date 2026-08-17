@@ -30,7 +30,7 @@ Every continuity check resolves to one of:
 - **Decision Engine** — deterministic continuity decisions.
 - **Continuity Witness** — reproducible evidence of each decision.
 
-## R0-R10 baseline
+## R0-R11 baseline
 
 The current development baseline contains:
 
@@ -51,7 +51,11 @@ The current development baseline contains:
 - CI-produced evidence artifacts for LangGraph and Temporal reference adapters;
 - in-toto Statement v1 binding for exact conformance artifacts;
 - core-only attestation builder and semantic verifier CLIs;
-- Sigstore keyless reference signing through GitHub Actions OIDC.
+- Sigstore keyless reference signing through GitHub Actions OIDC;
+- content-addressed `howedo.attestation-trust-policy.v1` consumer policies;
+- deterministic `ACCEPT` / `REJECT` attestation trust evaluation;
+- Sigstore/Cosign reference crypto-verifier adapter;
+- standard in-toto Simple Verification Result v0.2 trust receipts.
 
 ## Installation profiles
 
@@ -61,7 +65,7 @@ The core package has no required runtime or cryptography dependencies:
 pip install howedo-continuity
 ```
 
-The adapter contract, conformance kit, artifact verifier, attestation statement builder/verifier, and SDK helpers are part of core and do not require a runtime vendor SDK or signing library.
+The adapter contract, conformance kit, artifact verifier, attestation statement builder/verifier, trust policy engine, and SDK helpers are part of core and do not require a runtime vendor SDK or signing library.
 
 Optional reference adapters are isolated extras:
 
@@ -161,6 +165,40 @@ R10 does not grant execution authority and does not implement a custom PKI, cust
 
 See `docs/signed-conformance-attestation-v1.md` and `docs/adr/ADR-0011-signed-conformance-attestation.md`.
 
+## Attestation trust policy
+
+R11 adds consumer-side policy evaluation after R10 authentication:
+
+```text
+R9 artifact integrity
+        AND
+R10 statement binding
+        AND
+external crypto verification
+        AND
+HOWEDO trust policy
+        ↓
+ACCEPT / REJECT
+        ↓
+in-toto SVR v0.2
+```
+
+`howedo.attestation-trust-policy.v1` is content-addressed and evaluates verifier identity, issuer, signer identity, repository, workflow, execution ref, trigger, predicate type, artifact version, conformance status, transparency verification, and exact workflow-SHA-to-R9-checkout binding.
+
+The reference end-to-end verifier is:
+
+```bash
+howedo-verify-sigstore-trust ...
+```
+
+It invokes Cosign as external tooling; HOWEDO core remains cryptography-library independent.
+
+R11 uses the standard in-toto Simple Verification Result v0.2 predicate instead of inventing a proprietary verification receipt. The reference CI path also signs the resulting SVR records keylessly.
+
+The production reference policy accepts only the canonical workflow on `refs/heads/main`. Pull requests use a separate test-only policy. The production policy digest must be pinned through an independent trusted channel when used as a security root.
+
+See `docs/attestation-trust-policy-v1.md` and `docs/adr/ADR-0012-attestation-trust-policy.md`.
+
 ## Integrations
 
 **Implemented reference adapters:**
@@ -168,6 +206,7 @@ See `docs/signed-conformance-attestation-v1.md` and `docs/adr/ADR-0011-signed-co
 - PostgreSQL — persistence/reference storage adapter.
 - LangGraph OSS — exact checkpoint binding and HOWEDO-gated resume through the public LangGraph API.
 - Temporal OSS — exact workflow-run binding and HOWEDO-gated signal delivery through the public Temporal Python SDK.
+- Sigstore/Cosign — external cryptographic verification adapter for the R11 reference trust flow.
 
 The Temporal adapter deliberately binds `namespace + workflow_id + run_id`. A continuation request is never redirected to an unrelated or successor run merely because it shares the same workflow ID. The bound run must still be `RUNNING`, and HOWEDO recovery validity must resolve to `RECOVER`, before the adapter sends the signal.
 

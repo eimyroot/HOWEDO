@@ -1,6 +1,8 @@
 name: Conformance Matrix
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -47,7 +49,10 @@ jobs:
           import howedo.domain
           import howedo.recovery
           import howedo.runtime
-          print("HOWEDO_CORE_ADAPTER_SDK_ATTESTATION_IMPORT=PASS")
+          import howedo.sigstore_trust
+          import howedo.trust_cli
+          import howedo.trust_policy
+          print("HOWEDO_CORE_TRUST_POLICY_IMPORT=PASS")
           PY
 
   profile-conformance:
@@ -107,7 +112,7 @@ jobs:
               python -c 'from howedo.storage.postgres import PostgresStorageAdapter; from howedo.adapters.langgraph_v1 import LangGraphRuntimeAdapterV1; from howedo.adapters.temporal_v1 import TemporalRuntimeAdapterV1; print("ALL_ADAPTER_V1_IMPORTS=PASS")'
               ;;
             dev)
-              python -c 'import howedo; import howedo.adapter_sdk; import howedo.attestation; print("DEV_CORE_SDK_ATTESTATION_IMPORT=PASS")'
+              python -c 'import howedo; import howedo.adapter_sdk; import howedo.trust_policy; print("DEV_CORE_TRUST_POLICY_IMPORT=PASS")'
               ;;
           esac
       - name: Ruff
@@ -159,6 +164,15 @@ jobs:
           actual = {p.name for p in Path("schemas/attestation-v1").glob("*.json")}
           assert actual == expected, f"attestation-v1 schema drift: {sorted(actual)}"
           print("ATTESTATION_V1_SCHEMA_SET=PASS")
+          PY
+      - name: Freeze trust-policy-v1 schema filenames
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          expected = {"attestation-trust-policy.schema.json"}
+          actual = {p.name for p in Path("schemas/trust-policy-v1").glob("*.json")}
+          assert actual == expected, f"trust-policy-v1 schema drift: {sorted(actual)}"
+          print("TRUST_POLICY_V1_SCHEMA_SET=PASS")
           PY
 
   langgraph-integration:
@@ -238,6 +252,7 @@ jobs:
     env:
       HOWEDO_SIGNER_IDENTITY: https://github.com/${{ github.workflow_ref }}
       HOWEDO_SIGNER_ISSUER: https://token.actions.githubusercontent.com
+      HOWEDO_TRUST_POLICY: ${{ github.event_name == 'pull_request' && 'policies/test/github-actions-pr-conformance-trust-v1.json' || 'policies/reference/github-actions-conformance-trust-v1.json' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -288,6 +303,62 @@ jobs:
               --certificate-github-workflow-ref "$GITHUB_REF" \
               --certificate-github-workflow-trigger "$GITHUB_EVENT_NAME"
             howedo-verify-attestation "$artifact" "$statement"
+            count=$((count + 1))
+          done
+          test "$count" -eq 4
+      - name: Evaluate R11 trust policy and emit in-toto SVR receipts
+        run: |
+          count=0
+          created="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          for statement in signed-attestations/*.intoto.json; do
+            base="$(basename "$statement" .intoto.json)"
+            artifact="r9-artifacts/${base}.json"
+            bundle="${statement%.intoto.json}.sigstore.json"
+            receipt="signed-attestations/${base}.svr.json"
+            howedo-verify-sigstore-trust \
+              --artifact "$artifact" \
+              --statement "$statement" \
+              --bundle "$bundle" \
+              --policy "$HOWEDO_TRUST_POLICY" \
+              --issuer "$HOWEDO_SIGNER_ISSUER" \
+              --identity "$HOWEDO_SIGNER_IDENTITY" \
+              --repository "$GITHUB_REPOSITORY" \
+              --workflow ".github/workflows/consolidation.yml" \
+              --execution-sha "$GITHUB_SHA" \
+              --execution-ref "$GITHUB_REF" \
+              --trigger "$GITHUB_EVENT_NAME" \
+              --time-created "$created" \
+              --evidence-ref "github-actions://run/${GITHUB_RUN_ID}" \
+              --evidence-ref "sigstore://bundle/${base}" \
+              --output "$receipt"
+            count=$((count + 1))
+          done
+          test "$count" -eq 4
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          receipts = sorted(Path("signed-attestations").glob("*.svr.json"))
+          assert len(receipts) == 4
+          for path in receipts:
+              data = json.loads(path.read_text())
+              assert data["predicateType"] == "https://in-toto.io/attestation/svr/v0.2"
+              assert "HOWEDO_ATTESTATION_TRUST_ACCEPTED" in data["predicate"]["properties"]
+          print("HOWEDO_R11_TRUST_RECEIPTS=4_ACCEPTED")
+          PY
+      - name: Keyless sign and verify R11 SVR receipts
+        run: |
+          count=0
+          for receipt in signed-attestations/*.svr.json; do
+            bundle="${receipt%.svr.json}.svr.sigstore.json"
+            cosign sign-blob --yes --bundle "$bundle" "$receipt"
+            cosign verify-blob "$receipt" \
+              --bundle "$bundle" \
+              --certificate-identity "$HOWEDO_SIGNER_IDENTITY" \
+              --certificate-oidc-issuer "$HOWEDO_SIGNER_ISSUER" \
+              --certificate-github-workflow-repository "$GITHUB_REPOSITORY" \
+              --certificate-github-workflow-sha "$GITHUB_SHA" \
+              --certificate-github-workflow-ref "$GITHUB_REF" \
+              --certificate-github-workflow-trigger "$GITHUB_EVENT_NAME"
             count=$((count + 1))
           done
           test "$count" -eq 4
