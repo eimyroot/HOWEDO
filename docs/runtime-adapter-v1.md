@@ -82,22 +82,24 @@ Normalized adapter failure codes:
 - `UNSUPPORTED_CAPABILITY`
 - `PROTOCOL_VIOLATION`
 
-Vendor exceptions may be retained as causes, but SDK-facing behavior SHOULD expose one of these stable categories.
+Vendor exceptions may be retained as causes, but SDK-facing adapter behavior SHOULD expose one of these stable categories. HOWEDO reference v1 bridges normalize identity, lifecycle, protocol, and continuity-block failures into this taxonomy.
 
 ## Conformance
 
 A v1 conformance run verifies at minimum:
 
-1. contract version is exact;
-2. required capabilities are declared;
-3. manifest is deterministic/content-addressed;
-4. runtime family in identity matches the manifest;
-5. binding uses the resolved exact identity;
-6. binding carries the exact manifest digest;
-7. unchanged authoritative reality resolves to `RECOVER`;
-8. changed authoritative reality never resolves to `RECOVER`.
+1. the implementation structurally satisfies `RuntimeAdapterV1`;
+2. contract version is exact;
+3. required capabilities are declared;
+4. manifest is deterministic/content-addressed;
+5. runtime family in identity matches the manifest;
+6. binding uses the resolved exact identity;
+7. binding carries the exact manifest digest;
+8. unchanged authoritative reality resolves to `RECOVER`;
+9. changed authoritative reality never resolves to `RECOVER`;
+10. the adapter performs a real continuation only through the validated binding and the runtime-specific fixture verifies the continuation effect.
 
-Reference adapters SHOULD add runtime-specific tests proving exact continuation targeting and rejection of unavailable/closed/superseded executions.
+The generic kit therefore exercises the full `resolve → capture → validate → changed-reality block → continue` lifecycle. Reference adapters MUST additionally keep runtime-specific tests for exact targeting and rejection of unavailable/closed/superseded executions where the runtime exposes those lifecycle states.
 
 ## Boundary
 

@@ -21,10 +21,11 @@ class AdapterFixture(Protocol):
     target: Any
     resources: Sequence[ResourceRevision]
     current_heads: Mapping[str, ResourceRevision]
+    continuation: Any
 
     async def changed_heads(self) -> Mapping[str, ResourceRevision]: ...
 
-    async def closed_target(self) -> Any: ...
+    async def verify_continuation(self, result: Any) -> bool: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,6 +44,14 @@ class AdapterConformanceSuite:
         fixture: AdapterFixture,
     ) -> tuple[ConformanceResult, ...]:
         results: list[ConformanceResult] = []
+        results.append(
+            ConformanceResult(
+                check="runtime-adapter-v1-structural",
+                passed=isinstance(adapter, RuntimeAdapterV1),
+                detail=type(adapter).__name__,
+            )
+        )
+
         manifest = adapter.manifest()
         self._manifest_checks(manifest, results)
 
@@ -92,6 +101,21 @@ class AdapterConformanceSuite:
                 check="changed-reality-does-not-recover",
                 passed=changed.action is not ContinuityAction.RECOVER,
                 detail=changed.action.value,
+            )
+        )
+
+        continuation_result = await adapter.continue_after_validate(
+            fixture.runtime,
+            binding,
+            fixture.continuation,
+            current_heads=fixture.current_heads,
+        )
+        continuation_verified = await fixture.verify_continuation(continuation_result)
+        results.append(
+            ConformanceResult(
+                check="continue-after-recover",
+                passed=continuation_verified,
+                detail=type(continuation_result).__name__,
             )
         )
 

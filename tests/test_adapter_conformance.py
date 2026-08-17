@@ -85,6 +85,8 @@ class FakeAdapter:
         )
 
     async def continue_after_validate(self, runtime, binding, continuation, **kwargs):
+        decision = await self.validate_resume(runtime, binding, **kwargs)
+        assert decision.action.value == "RECOVER"
         return continuation
 
 
@@ -94,12 +96,13 @@ class FakeFixture:
     target: Any
     resources: tuple[ResourceRevision, ...]
     current_heads: dict[str, ResourceRevision]
+    continuation: Any = "continued"
 
     async def changed_heads(self) -> dict[str, ResourceRevision]:
         return {"policy://deploy": revision("policy://deploy", "2")}
 
-    async def closed_target(self) -> Any:
-        return self.target
+    async def verify_continuation(self, result: Any) -> bool:
+        return result == self.continuation
 
 
 def test_vendor_neutral_conformance_suite() -> None:
@@ -114,11 +117,13 @@ def test_vendor_neutral_conformance_suite() -> None:
         results = await AdapterConformanceSuite().run(FakeAdapter(), fixture)
         AdapterConformanceSuite.assert_passed(results)
         assert {item.check for item in results} >= {
+            "runtime-adapter-v1-structural",
             "contract-version",
             "required-capabilities",
             "binding-exact-identity",
             "unchanged-reality-recovers",
             "changed-reality-does-not-recover",
+            "continue-after-recover",
         }
 
     asyncio.run(scenario())

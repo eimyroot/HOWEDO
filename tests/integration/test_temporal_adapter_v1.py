@@ -51,12 +51,13 @@ class TemporalFixture:
     target: Any
     resources: tuple[ResourceRevision, ...]
     current_heads: dict[str, ResourceRevision]
+    continuation: Any = ("resume", ())
 
     async def changed_heads(self) -> dict[str, ResourceRevision]:
         return {"policy://deploy": revision("policy://deploy", "2")}
 
-    async def closed_target(self) -> Any:
-        return self.target
+    async def verify_continuation(self, result: Any) -> bool:
+        return bool(await self.target.result())
 
 
 def test_temporal_reference_bridge_passes_runtime_adapter_v1() -> None:
@@ -83,14 +84,6 @@ def test_temporal_reference_bridge_passes_runtime_adapter_v1() -> None:
             )
             results = await AdapterConformanceSuite().run(adapter, fixture)
             AdapterConformanceSuite.assert_passed(results)
-
-            binding = await adapter.capture(env.client, handle, resources=(policy,))
-            await adapter.continue_after_validate(
-                env.client,
-                binding,
-                ("resume", ()),
-                current_heads={policy.resource_id: policy},
-            )
-            assert await handle.result() is True
+            assert next(item for item in results if item.check == "continue-after-recover").passed
 
     asyncio.run(scenario())

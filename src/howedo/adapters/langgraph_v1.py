@@ -6,11 +6,18 @@ from typing import Any
 from howedo.adapter_contract import (
     AdapterBinding,
     AdapterCapability,
+    AdapterContractError,
+    AdapterFailureCode,
     AdapterManifest,
     RuntimeIdentity,
     require_recover,
 )
-from howedo.adapters.langgraph import LangGraphRecoveryBinding, LangGraphRuntimeAdapter
+from howedo.adapters.langgraph import (
+    LangGraphCheckpointMismatch,
+    LangGraphProtocolError,
+    LangGraphRecoveryBinding,
+    LangGraphRuntimeAdapter,
+)
 from howedo.concur import FenceToken
 from howedo.domain import ResourceRevision, Validity
 from howedo.recovery import RecoveryDecision
@@ -41,8 +48,14 @@ class LangGraphRuntimeAdapterV1:
         return self._adapter.runtime_revision()
 
     async def resolve_identity(self, runtime: Any, target: Any) -> RuntimeIdentity:
-        state = runtime.get_state(target)
-        checkpoint = self._adapter._checkpoint_ref(state)
+        try:
+            state = runtime.get_state(target)
+            checkpoint = self._adapter._checkpoint_ref(state)
+        except LangGraphProtocolError as exc:
+            raise AdapterContractError(
+                AdapterFailureCode.IDENTITY_UNRESOLVED,
+                str(exc),
+            ) from exc
         return RuntimeIdentity(
             runtime_family="langgraph",
             namespace=checkpoint.checkpoint_ns or "default",
@@ -81,14 +94,25 @@ class LangGraphRuntimeAdapterV1:
         semantic_comparator: SemanticComparator | None = None,
     ) -> RecoveryDecision:
         recovery_binding = self._recovery_binding(binding)
-        return self._adapter.validate_resume(
-            runtime,
-            recovery_binding,
-            current_heads=current_heads,
-            current_fences=current_fences,
-            validity=validity,
-            semantic_comparator=semantic_comparator,
-        )
+        try:
+            return self._adapter.validate_resume(
+                runtime,
+                recovery_binding,
+                current_heads=current_heads,
+                current_fences=current_fences,
+                validity=validity,
+                semantic_comparator=semantic_comparator,
+            )
+        except LangGraphCheckpointMismatch as exc:
+            raise AdapterContractError(
+                AdapterFailureCode.IDENTITY_MISMATCH,
+                str(exc),
+            ) from exc
+        except LangGraphProtocolError as exc:
+            raise AdapterContractError(
+                AdapterFailureCode.PROTOCOL_VIOLATION,
+                str(exc),
+            ) from exc
 
     async def continue_after_validate(
         self,
@@ -115,9 +139,15 @@ class LangGraphRuntimeAdapterV1:
 
     def _recovery_binding(self, binding: AdapterBinding) -> LangGraphRecoveryBinding:
         if binding.adapter_manifest_digest != self.manifest().digest():
-            raise ValueError("LangGraph adapter manifest digest mismatch")
+            raise AdapterContractError(
+                AdapterFailureCode.PROTOCOL_VIOLATION,
+                "LangGraph adapter manifest digest mismatch",
+            )
         if not isinstance(binding.recovery_binding, LangGraphRecoveryBinding):
-            raise TypeError("binding does not contain a LangGraph recovery binding")
+            raise AdapterContractError(
+                AdapterFailureCode.PROTOCOL_VIOLATION,
+                "binding does not contain a LangGraph recovery binding",
+            )
         expected = binding.recovery_binding.checkpoint
         identity = binding.identity
         if (
@@ -126,5 +156,8 @@ class LangGraphRuntimeAdapterV1:
             or identity.execution_revision != expected.checkpoint_id
             or identity.namespace != (expected.checkpoint_ns or "default")
         ):
-            raise ValueError("LangGraph adapter binding identity mismatch")
+            raise AdapterContractError(
+                AdapterFailureCode.IDENTITY_MISMATCH,
+                "LangGraph adapter binding identity mismatch",
+            )
         return binding.recovery_binding

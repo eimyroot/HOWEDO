@@ -23,18 +23,29 @@ Use `AdapterManifest.build()` and `RuntimeIdentity` from `howedo.adapter_sdk`.
 4. run HOWEDO recovery validation before any continuation side effect;
 5. refuse continuation unless the result is `RECOVER`;
 6. never weaken `PAUSE`, `REVALIDATE`, or `ABORT` into a local allow;
-7. retain vendor-specific data only as an extension behind the stable v1 identity.
+7. retain vendor-specific data only as an extension behind the stable v1 identity;
+8. expose protocol, identity, lifecycle, and continuity-block failures through the stable adapter failure taxonomy where applicable.
 
 ## Testing
 
-Create a runtime-specific `AdapterFixture` and run:
+Create a runtime-specific `AdapterFixture` containing:
+
+- `runtime`
+- `target`
+- tracked `resources`
+- unchanged `current_heads`
+- a valid runtime-specific `continuation`
+- `changed_heads()` returning an incompatible current reality
+- `verify_continuation(result)` proving the continuation really occurred
+
+Then run:
 
 ```python
 results = await AdapterConformanceSuite().run(adapter, fixture)
 AdapterConformanceSuite.assert_passed(results)
 ```
 
-Then add runtime-specific tests for the capabilities the generic suite cannot prove, especially exact continuation targeting, closed/superseded execution rejection, and any fencing guarantees.
+The shared suite executes the full lifecycle, including the continuation effect. Add runtime-specific tests for behavior the generic suite cannot prove, especially exact targeting under runtime races, closed/superseded execution rejection, transport behavior, and any fencing guarantees.
 
 ## Versioning
 
