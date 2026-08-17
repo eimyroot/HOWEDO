@@ -13,6 +13,7 @@ class SigstoreGithubClaims:
     workflow_sha: str
     workflow_ref: str
     workflow_trigger: str
+    workflow_name: str | None = None
 
     def __post_init__(self) -> None:
         if any(
@@ -27,6 +28,8 @@ class SigstoreGithubClaims:
             )
         ):
             raise ValueError("Sigstore GitHub claim expectations must be non-empty")
+        if self.workflow_name is not None and not self.workflow_name:
+            raise ValueError("Sigstore GitHub workflow name expectation must be non-empty")
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,13 +64,21 @@ def verify_sigstore_github_bundle(
         claims.issuer,
         "--certificate-github-workflow-repository",
         claims.repository,
-        "--certificate-github-workflow-sha",
-        claims.workflow_sha,
-        "--certificate-github-workflow-ref",
-        claims.workflow_ref,
-        "--certificate-github-workflow-trigger",
-        claims.workflow_trigger,
     ]
+    if claims.workflow_name is not None:
+        command.extend(
+            ["--certificate-github-workflow-name", claims.workflow_name]
+        )
+    command.extend(
+        [
+            "--certificate-github-workflow-sha",
+            claims.workflow_sha,
+            "--certificate-github-workflow-ref",
+            claims.workflow_ref,
+            "--certificate-github-workflow-trigger",
+            claims.workflow_trigger,
+        ]
+    )
     try:
         completed = subprocess.run(
             command,
