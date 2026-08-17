@@ -3,8 +3,7 @@
     "howedo.adapter-conformance-artifact.v1"
   ],
   "allowed_identity_patterns": [
-    "https://github.com/nulleimy/HOWEDO/.github/workflows/consolidation.yml@refs/heads/main",
-    "https://github.com/nulleimy/HOWEDO/.github/workflows/consolidation.yml@refs/pull/*/merge"
+    "https://github.com/nulleimy/HOWEDO/.github/workflows/consolidation.yml@refs/heads/main"
   ],
   "allowed_issuers": [
     "https://token.actions.githubusercontent.com"
@@ -13,14 +12,13 @@
     "https://github.com/nulleimy/HOWEDO/attestations/adapter-conformance/v1"
   ],
   "allowed_ref_patterns": [
-    "refs/heads/main",
-    "refs/pull/*/merge"
+    "refs/heads/main"
   ],
   "allowed_repositories": [
     "nulleimy/HOWEDO"
   ],
   "allowed_triggers": [
-    "pull_request",
+    "push",
     "workflow_dispatch"
   ],
   "allowed_verifiers": [
@@ -29,7 +27,7 @@
   "allowed_workflows": [
     ".github/workflows/consolidation.yml"
   ],
-  "policy_digest": "sha256:37a1aed744e334a915c0bf1f390fb36bc2a66b4241a2995b0aa0e09b6a03d0ff",
+  "policy_digest": "sha256:df956d0249936667287b42534030ec0594c9e84aad36f348f48614c2cee0e9d7",
   "policy_id": "https://github.com/nulleimy/HOWEDO/policies/reference/github-actions-conformance-trust-v1",
   "policy_version": "howedo.attestation-trust-policy.v1",
   "require_conformant_status": true,
