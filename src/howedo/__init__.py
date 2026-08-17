@@ -1,5 +1,6 @@
 """HOWEDO continuity kernel public surface."""
 
+from howedo.concur import ConcurDecision, ConcurEngine, FenceRegistry, FenceToken, WriteIntent
 from howedo.domain import (
     ContinuityAction,
     ContinuityDecision,
@@ -9,7 +10,7 @@ from howedo.domain import (
     ResourceRevision,
     Validity,
 )
-from howedo.kernel import DecisionEngine, StateRegistry
+from howedo.kernel import DecisionEngine, HeadConflict, StateRegistry
 from howedo.recall import (
     DependencyEdge,
     DependencyGraph,
@@ -22,6 +23,8 @@ from howedo.semlock import CompatibilityRule, ExactSemanticComparator, RuleBased
 
 __all__ = [
     "CompatibilityRule",
+    "ConcurDecision",
+    "ConcurEngine",
     "ContinuityAction",
     "ContinuityDecision",
     "ContinuitySnapshot",
@@ -31,6 +34,9 @@ __all__ = [
     "DependencyGraph",
     "DriftClassification",
     "ExactSemanticComparator",
+    "FenceRegistry",
+    "FenceToken",
+    "HeadConflict",
     "RecallEngine",
     "RecallImpact",
     "RecallResult",
@@ -39,4 +45,5 @@ __all__ = [
     "RuleBasedSemanticComparator",
     "StateRegistry",
     "Validity",
+    "WriteIntent",
 ]
