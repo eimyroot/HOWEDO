@@ -30,9 +30,9 @@ Every continuity check resolves to one of:
 - **Decision Engine** — deterministic continuity decisions.
 - **Continuity Witness** — reproducible evidence of each decision.
 
-## R0-R6 baseline
+## R0-R7 baseline
 
-The current integration baseline contains:
+The current development baseline contains:
 
 - deterministic continuity kernel and witness contract;
 - SEMLOCK semantic drift classification;
@@ -41,7 +41,8 @@ The current integration baseline contains:
 - recovery validity / safe-resume gating;
 - stable `howedo.protocol.v1` schemas;
 - optional PostgreSQL reference persistence adapter;
-- optional LangGraph OSS runtime adapter.
+- optional LangGraph OSS runtime adapter;
+- optional Temporal OSS Python runtime adapter.
 
 ## Installation profiles
 
@@ -56,7 +57,8 @@ Optional adapters are isolated extras:
 ```bash
 pip install 'howedo-continuity[postgres]'
 pip install 'howedo-continuity[langgraph]'
-pip install 'howedo-continuity[postgres,langgraph]'
+pip install 'howedo-continuity[temporal]'
+pip install 'howedo-continuity[postgres,langgraph,temporal]'
 ```
 
 ## Integrations
@@ -65,8 +67,11 @@ pip install 'howedo-continuity[postgres,langgraph]'
 
 - PostgreSQL — persistence/reference storage adapter.
 - LangGraph OSS — exact checkpoint binding and HOWEDO-gated resume through the public LangGraph API.
+- Temporal OSS — exact workflow-run binding and HOWEDO-gated signal delivery through the public Temporal Python SDK.
 
-**Future adapters:** Temporal, OpenAI, AWS AgentCore, custom Python runtimes, CASER, and V-One.
+The Temporal adapter deliberately binds `namespace + workflow_id + run_id`. A continuation request is never redirected to an unrelated or successor run merely because it shares the same workflow ID. The bound run must still be `RUNNING`, and HOWEDO recovery validity must resolve to `RECOVER`, before the adapter sends the signal.
+
+**Future adapters:** OpenAI, AWS AgentCore, custom Python runtimes, CASER, and V-One.
 
 Adapters never own HOWEDO continuity semantics and are not required dependencies of the core package.
 
