@@ -1,15 +1,16 @@
-name: Release
+name: Release Candidate
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v*"
 
 permissions:
   contents: read
 
 jobs:
   build:
-    name: build, verify, and attest release
+    name: build, verify, and attest release candidate
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -20,7 +21,7 @@ jobs:
       - name: Checkout exact release tag
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ github.ref }}
           fetch-depth: 0
 
       - name: Set up Python
@@ -44,7 +45,7 @@ jobs:
           print(data["project"]["version"])
           PY
           )"
-          test "${{ github.event.release.tag_name }}" = "v${VERSION}"
+          test "${GITHUB_REF_NAME}" = "v${VERSION}"
 
       - name: Install release tooling
         run: |
@@ -92,6 +93,14 @@ jobs:
             --output-file "$SBOM" \
             /tmp/howedo-release/bin/python
 
+          python - <<PY
+          import json
+          from pathlib import Path
+          data = json.loads(Path("${SBOM}").read_text(encoding="utf-8"))
+          assert data["bomFormat"] == "CycloneDX"
+          assert data["specVersion"] == "1.6"
+          PY
+
           COMMIT="$(git rev-parse HEAD)"
           TREE="$(git rev-parse HEAD^{tree})"
           WHEEL_REL="${WHEEL#dist/}"
@@ -102,7 +111,7 @@ jobs:
           /tmp/howedo-release/bin/howedo-build-release-bundle \
             --root dist \
             --version "$VERSION" \
-            --tag "${{ github.event.release.tag_name }}" \
+            --tag "$GITHUB_REF_NAME" \
             --git-commit "$COMMIT" \
             --git-tree "$TREE" \
             --wheel "$WHEEL_REL" \
@@ -113,7 +122,7 @@ jobs:
           /tmp/howedo-release/bin/howedo-verify-release-bundle \
             "$MANIFEST" \
             --root dist \
-            --expected-tag "${{ github.event.release.tag_name }}" \
+            --expected-tag "$GITHUB_REF_NAME" \
             --expected-commit "$COMMIT" \
             --expected-tree "$TREE"
 
@@ -135,31 +144,43 @@ jobs:
           subject-path: dist/python/*.whl
           sbom-path: dist/evidence/*.cdx.json
 
-      - name: Upload release evidence
+      - name: Upload verified release candidate
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
         with:
-          name: howedo-release-${{ github.event.release.tag_name }}
+          name: howedo-release-${{ github.ref_name }}
           path: dist/
           if-no-files-found: error
           retention-days: 30
 
-  pypi:
-    name: publish to PyPI with Trusted Publishing
-    if: ${{ vars.HOWEDO_PYPI_PUBLISH_ENABLED == 'true' }}
+  draft-release:
+    name: attach verified assets to draft GitHub Release
     needs: build
     runs-on: ubuntu-latest
-    environment: pypi
     permissions:
-      id-token: write
-      contents: read
+      contents: write
     steps:
-      - name: Download verified release evidence
+      - name: Download verified release candidate
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53
         with:
-          name: howedo-release-${{ github.event.release.tag_name }}
+          name: howedo-release-${{ github.ref_name }}
           path: dist
 
-      - name: Publish Python distributions
-        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33
-        with:
-          packages-dir: dist/python/
+      - name: Recheck artifact digests
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd dist && sha256sum -c evidence/SHA256SUMS)
+
+      - name: Create draft GitHub Release with verified assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "$GITHUB_REF_NAME" \
+            dist/python/* \
+            dist/evidence/* \
+            --draft \
+            --verify-tag \
+            --title "$GITHUB_REF_NAME" \
+            --notes "HOWEDO verified release candidate. Review assets and evidence before publishing."
