@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from pathlib import Path
 from typing import Any
@@ -305,7 +305,13 @@ def load_trust_root_publication_manifest(record: dict[str, Any]) -> TrustRootPub
         keyids = raw.get("keyids")
         if not isinstance(keyids, list) or not all(isinstance(item, str) for item in keyids):
             raise TypeError("published role keyids must be a string list")
-        roles.append(PublishedRole(name=_required_string(raw, "name"), keyids=tuple(keyids), threshold=_required_int(raw, "threshold")))
+        roles.append(
+            PublishedRole(
+                name=_required_string(raw, "name"),
+                keyids=tuple(keyids),
+                threshold=_required_int(raw, "threshold"),
+            )
+        )
     raw_history = record.get("root_history")
     if not isinstance(raw_history, list):
         raise TypeError("root_history must be a list")
@@ -313,7 +319,12 @@ def load_trust_root_publication_manifest(record: dict[str, Any]) -> TrustRootPub
     for raw in raw_history:
         if not isinstance(raw, dict) or set(raw) != {"digest", "version"}:
             raise ValueError("published root history entry shape mismatch")
-        history.append(PublishedRootVersion(version=_required_int(raw, "version"), digest=_required_string(raw, "digest")))
+        history.append(
+            PublishedRootVersion(
+                version=_required_int(raw, "version"),
+                digest=_required_string(raw, "digest"),
+            )
+        )
     manifest = TrustRootPublicationManifest(
         publication_id=_required_string(record, "publication_id"),
         policy_digest=_required_string(record, "policy_digest"),
@@ -334,7 +345,9 @@ def load_trust_root_publication_manifest(record: dict[str, Any]) -> TrustRootPub
     return manifest
 
 
-def _verify_root_history(root_history: tuple[bytes, ...]) -> tuple[tuple[PublishedRootVersion, ...], Any]:
+def _verify_root_history(
+    root_history: tuple[bytes, ...],
+) -> tuple[tuple[PublishedRootVersion, ...], Any]:
     if not root_history:
         raise ValueError("root_history must contain at least bootstrap root v1")
     try:
@@ -350,14 +363,23 @@ def _verify_root_history(root_history: tuple[bytes, ...]) -> tuple[tuple[Publish
             raise ValueError("root history contains an empty metadata file")
         metadata = Metadata.from_bytes(root_bytes)
         if not isinstance(metadata.signed, Root):
-            raise ValueError("root history may contain only TUF root metadata")
+            raise TypeError("root history may contain only TUF root metadata")
         if metadata.signed.version != expected_version:
             raise ValueError("root history must retain contiguous versions from 1..N")
         previous_root = previous.signed if previous is not None else None
-        result = metadata.signed.get_root_verification_result(previous_root, metadata.signed_bytes, metadata.signatures)
+        result = metadata.signed.get_root_verification_result(
+            previous_root,
+            metadata.signed_bytes,
+            metadata.signatures,
+        )
         if not result:
             raise ValueError(f"TUF root v{expected_version} signature threshold verification failed")
-        published.append(PublishedRootVersion(version=expected_version, digest=f"sha256:{sha256(root_bytes).hexdigest()}"))
+        published.append(
+            PublishedRootVersion(
+                version=expected_version,
+                digest=f"sha256:{sha256(root_bytes).hexdigest()}",
+            )
+        )
         previous = metadata
         current = metadata
     assert current is not None
@@ -370,7 +392,13 @@ def _extract_roles(root: Any) -> tuple[PublishedRole, ...]:
         role = root.roles.get(role_name)
         if role is None:
             raise ValueError(f"missing TUF top-level role: {role_name}")
-        result.append(PublishedRole(name=role_name, keyids=tuple(sorted(role.keyids)), threshold=role.threshold))
+        result.append(
+            PublishedRole(
+                name=role_name,
+                keyids=tuple(sorted(role.keyids)),
+                threshold=role.threshold,
+            )
+        )
     return tuple(result)
 
 
@@ -424,13 +452,13 @@ def _required_bool(record: dict[str, Any], key: str) -> bool:
 
 def _parse_utc(value: str) -> datetime:
     try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(value)
     except ValueError as exc:
         raise ValueError("timestamp must be ISO-8601 UTC") from exc
     return _normalize_utc(parsed)
 
 
 def _normalize_utc(value: datetime) -> datetime:
-    if value.tzinfo is None or value.utcoffset() != timezone.utc.utcoffset(value):
+    if value.tzinfo is None or value.utcoffset() != UTC.utcoffset(value):
         raise ValueError("timestamp must be timezone-aware UTC")
-    return value.astimezone(timezone.utc).replace(microsecond=0)
+    return value.astimezone(UTC).replace(microsecond=0)
