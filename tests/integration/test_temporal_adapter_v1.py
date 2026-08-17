@@ -4,6 +4,7 @@ import asyncio
 import os
 from dataclasses import dataclass
 from hashlib import sha256
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -94,5 +95,10 @@ def test_temporal_reference_bridge_issues_conformance_artifact() -> None:
             assert artifact.status is ConformanceStatus.CONFORMANT
             assert verify_conformance_record(artifact.record()).valid
             assert artifact.manifest.runtime_family == "temporal"
+
+            output_dir = os.environ.get("HOWEDO_CONFORMANCE_ARTIFACT_DIR")
+            if output_dir:
+                version = artifact.environment.python_version.replace(".", "")
+                artifact.write(Path(output_dir) / f"temporal-py{version}.json")
 
     asyncio.run(scenario())
