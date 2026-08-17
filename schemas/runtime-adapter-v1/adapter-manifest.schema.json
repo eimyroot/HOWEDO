@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://howedo.dev/schemas/runtime-adapter-v1/adapter-manifest.schema.json",
+  "title": "HOWEDO Runtime Adapter Manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "adapter_id",
+    "runtime_family",
+    "adapter_version",
+    "contract_version",
+    "capabilities"
+  ],
+  "properties": {
+    "adapter_id": {"type": "string", "minLength": 1},
+    "runtime_family": {"type": "string", "minLength": 1},
+    "adapter_version": {"type": "string", "minLength": 1},
+    "contract_version": {"const": "howedo.runtime-adapter.v1"},
+    "capabilities": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "EXACT_RUNTIME_IDENTITY",
+          "CAPTURE",
+          "VALIDATE_RESUME",
+          "CONTINUE",
+          "READ_ONLY_VALIDATE",
+          "FENCED_WRITES"
+        ]
+      }
+    }
+  }
+}
