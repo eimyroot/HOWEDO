@@ -4,14 +4,18 @@ import copy
 from datetime import UTC, datetime
 
 import pytest
-from securesystemslib.signer import CryptoSigner
-from tuf.api.metadata import Metadata, Root
 
 from howedo.trust_publication import (
     TrustRootPublicationPolicy,
     build_trust_root_publication_manifest,
     verify_trust_root_publication,
 )
+
+signer_module = pytest.importorskip("securesystemslib.signer")
+tuf_metadata = pytest.importorskip("tuf.api.metadata")
+CryptoSigner = signer_module.CryptoSigner
+Metadata = tuf_metadata.Metadata
+Root = tuf_metadata.Root
 
 VERIFIED_AT = datetime(2026, 8, 17, 8, 0, tzinfo=UTC)
 EXPIRES = datetime(2028, 8, 17, 8, 0, tzinfo=UTC)
