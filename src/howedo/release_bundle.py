@@ -189,10 +189,20 @@ def _release_file(root: Path, relative_path: str) -> ReleaseFile:
     candidate = Path(relative_path)
     if candidate.is_absolute() or ".." in candidate.parts:
         raise ValueError("release file path must be safe and relative")
+
+    resolved_root = root.resolve(strict=True)
     full_path = root / candidate
-    if not full_path.is_file() or full_path.is_symlink():
+    if full_path.is_symlink():
         raise ValueError(f"release file missing or unsafe: {relative_path}")
-    payload = full_path.read_bytes()
+    try:
+        resolved_path = full_path.resolve(strict=True)
+        resolved_path.relative_to(resolved_root)
+    except (FileNotFoundError, ValueError) as exc:
+        raise ValueError(f"release file missing or unsafe: {relative_path}") from exc
+    if not resolved_path.is_file():
+        raise ValueError(f"release file missing or unsafe: {relative_path}")
+
+    payload = resolved_path.read_bytes()
     return ReleaseFile(
         path=candidate.as_posix(),
         digest=f"sha256:{sha256(payload).hexdigest()}",
