@@ -30,7 +30,7 @@ Every continuity check resolves to one of:
 - **Decision Engine** — deterministic continuity decisions.
 - **Continuity Witness** — reproducible evidence of each decision.
 
-## R0-R9 baseline
+## R0-R10 baseline
 
 The current development baseline contains:
 
@@ -48,17 +48,20 @@ The current development baseline contains:
 - third-party adapter SDK surface and reference bridges;
 - content-addressed `howedo.adapter-conformance-artifact.v1` records;
 - core-only conformance artifact verifier and CLI;
-- CI-produced evidence artifacts for LangGraph and Temporal reference adapters.
+- CI-produced evidence artifacts for LangGraph and Temporal reference adapters;
+- in-toto Statement v1 binding for exact conformance artifacts;
+- core-only attestation builder and semantic verifier CLIs;
+- Sigstore keyless reference signing through GitHub Actions OIDC.
 
 ## Installation profiles
 
-The core package has no required runtime dependencies:
+The core package has no required runtime or cryptography dependencies:
 
 ```bash
 pip install howedo-continuity
 ```
 
-The adapter contract, conformance kit, artifact verifier, and SDK helpers are part of core and do not require a runtime vendor SDK.
+The adapter contract, conformance kit, artifact verifier, attestation statement builder/verifier, and SDK helpers are part of core and do not require a runtime vendor SDK or signing library.
 
 Optional reference adapters are isolated extras:
 
@@ -115,11 +118,48 @@ A saved artifact can be verified without installing LangGraph, Temporal, Postgre
 howedo-verify-conformance artifact.json
 ```
 
-The artifact is **content-addressed, not issuer-signed**. Its digest detects record changes and binds the included evidence, but it does not authenticate who created the record. Signed attestations, trust roots, revocation, and transparency are intentionally outside R9.
-
-The conformance suite includes a real continuation check, so artifact generation must use isolated/disposable runtime fixtures rather than arbitrary production executions.
+The R9 artifact is content-addressed. Its digest detects record changes and binds the included evidence.
 
 See `docs/adapter-conformance-artifact-v1.md` and `docs/adr/ADR-0010-adapter-conformance-artifact-v1.md`.
+
+## Signed conformance attestations
+
+R10 authenticates a conformance claim without changing the R9 artifact:
+
+```text
+R9 artifact
+    ↓
+in-toto Statement/v1
+    ↓
+exact subject SHA-256 binding
+    ↓
+HOWEDO semantic verification
+    ↓
+Sigstore keyless signature bundle
+    ↓
+expected GitHub workflow identity verification
+```
+
+Build and semantically verify a statement with core-only commands:
+
+```bash
+howedo-build-attestation artifact.json artifact.intoto.json
+howedo-verify-attestation artifact.json artifact.intoto.json
+```
+
+The reference CI path then signs the statement with Sigstore/Cosign using GitHub Actions OIDC. No long-lived signing key is stored by HOWEDO.
+
+A complete R10 acceptance requires all three checks:
+
+```text
+R9 artifact integrity
+AND R10 statement semantic binding
+AND Sigstore signer / transparency verification
+```
+
+R10 does not grant execution authority and does not implement a custom PKI, custom transparency log, or custom cryptographic signature format.
+
+See `docs/signed-conformance-attestation-v1.md` and `docs/adr/ADR-0011-signed-conformance-attestation.md`.
 
 ## Integrations
 
