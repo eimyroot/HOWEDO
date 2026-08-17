@@ -1,0 +1,164 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build, verify, and attest release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - name: Checkout exact release tag
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+
+      - name: Verify tag, version, and canonical main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --depth=1
+          RELEASE_SHA="$(git rev-parse HEAD)"
+          MAIN_SHA="$(git rev-parse origin/main)"
+          test "$RELEASE_SHA" = "$MAIN_SHA"
+
+          VERSION="$(python - <<'PY'
+          import tomllib
+          from pathlib import Path
+          data = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+          print(data["project"]["version"])
+          PY
+          )"
+          test "${{ github.event.release.tag_name }}" = "v${VERSION}"
+
+      - name: Install release tooling
+        run: |
+          python -m pip install \
+            'build>=1.3,<2' \
+            'twine>=6,<7' \
+            'cyclonedx-bom>=7.3,<8'
+
+      - name: Build distributions and clean-install wheel
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf dist /tmp/howedo-release
+          mkdir -p dist/python dist/evidence
+
+          python -m build --outdir dist/python
+          python -m twine check dist/python/*
+
+          VERSION="$(python - <<'PY'
+          import tomllib
+          from pathlib import Path
+          data = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+          print(data["project"]["version"])
+          PY
+          )"
+          WHEEL="$(find dist/python -maxdepth 1 -type f -name '*.whl' -print -quit)"
+          SDIST="$(find dist/python -maxdepth 1 -type f -name '*.tar.gz' -print -quit)"
+          test -n "$WHEEL"
+          test -n "$SDIST"
+
+          python -m venv /tmp/howedo-release
+          /tmp/howedo-release/bin/python -m pip install --no-deps "$WHEEL"
+          /tmp/howedo-release/bin/python - <<PY
+          from importlib.metadata import version
+          import howedo
+          assert version("howedo-continuity") == "${VERSION}"
+          assert howedo is not None
+          PY
+
+          SBOM="dist/evidence/howedo-continuity-${VERSION}.cdx.json"
+          cyclonedx-py environment \
+            --spec-version 1.6 \
+            --output-format JSON \
+            --output-reproducible \
+            --output-file "$SBOM" \
+            /tmp/howedo-release/bin/python
+
+          COMMIT="$(git rev-parse HEAD)"
+          TREE="$(git rev-parse HEAD^{tree})"
+          WHEEL_REL="${WHEEL#dist/}"
+          SDIST_REL="${SDIST#dist/}"
+          SBOM_REL="${SBOM#dist/}"
+          MANIFEST="dist/evidence/howedo-continuity-${VERSION}.release.json"
+
+          /tmp/howedo-release/bin/howedo-build-release-bundle \
+            --root dist \
+            --version "$VERSION" \
+            --tag "${{ github.event.release.tag_name }}" \
+            --git-commit "$COMMIT" \
+            --git-tree "$TREE" \
+            --wheel "$WHEEL_REL" \
+            --sdist "$SDIST_REL" \
+            --sbom "$SBOM_REL" \
+            --output "$MANIFEST"
+
+          /tmp/howedo-release/bin/howedo-verify-release-bundle \
+            "$MANIFEST" \
+            --root dist \
+            --expected-tag "${{ github.event.release.tag_name }}" \
+            --expected-commit "$COMMIT" \
+            --expected-tree "$TREE"
+
+          (
+            cd dist
+            find python evidence -type f ! -name SHA256SUMS -print0 \
+              | sort -z \
+              | xargs -0 sha256sum > evidence/SHA256SUMS
+          )
+
+      - name: Attest Python distributions
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-path: dist/python/*
+
+      - name: Attest wheel SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-path: dist/python/*.whl
+          sbom-path: dist/evidence/*.cdx.json
+
+      - name: Upload release evidence
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        with:
+          name: howedo-release-${{ github.event.release.tag_name }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
+
+  pypi:
+    name: publish to PyPI with Trusted Publishing
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Download verified release evidence
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53
+        with:
+          name: howedo-release-${{ github.event.release.tag_name }}
+          path: dist
+
+      - name: Publish Python distributions
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33
+        with:
+          packages-dir: dist/python/
