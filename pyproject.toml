@@ -19,6 +19,8 @@ howedo-verify-sigstore-trust = "howedo.trust_cli:sigstore_main"
 howedo-build-certification-package = "howedo.consumer_cli:build_main"
 howedo-verify-certification-package = "howedo.consumer_cli:verify_main"
 howedo-fetch-consumer-trust-profile = "howedo.trust_distribution_cli:main"
+howedo-build-trust-root-publication = "howedo.trust_publication_cli:build_main"
+howedo-verify-trust-root-publication = "howedo.trust_publication_cli:verify_main"
 
 [project.optional-dependencies]
 postgres = ["psycopg[binary]>=3.2,<4"]
