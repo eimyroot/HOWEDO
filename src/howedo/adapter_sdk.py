@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from collections.abc import Awaitable
-from typing import TypeVar
-
 from howedo.adapter_contract import (
     ADAPTER_CONTRACT_VERSION,
+    AdapterBinding,
     AdapterCapability,
+    AdapterContractError,
     AdapterFailureCode,
     AdapterManifest,
     AdapterResumeBlocked,
@@ -19,19 +18,12 @@ from howedo.adapter_conformance import (
     ConformanceResult,
 )
 
-T = TypeVar("T")
-
-
-async def maybe_await(value: T | Awaitable[T]) -> T:
-    if hasattr(value, "__await__"):
-        return await value  # type: ignore[misc]
-    return value
-
-
 __all__ = [
     "ADAPTER_CONTRACT_VERSION",
+    "AdapterBinding",
     "AdapterCapability",
     "AdapterConformanceSuite",
+    "AdapterContractError",
     "AdapterFailureCode",
     "AdapterFixture",
     "AdapterManifest",
@@ -39,6 +31,5 @@ __all__ = [
     "ConformanceResult",
     "RuntimeAdapterV1",
     "RuntimeIdentity",
-    "maybe_await",
     "require_recover",
 ]
