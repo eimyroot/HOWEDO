@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/nulleimy/HOWEDO/schemas/certification-package-v1/certification-package.schema.json",
+  "title": "HOWEDO Certification Package v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["artifact_digest", "files", "package_digest", "package_version", "policy_digest", "signer"],
+  "properties": {
+    "package_version": {"const": "howedo.certification-package.v1"},
+    "package_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "artifact_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "policy_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "files": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact", "policy", "statement", "statement_bundle", "svr", "svr_bundle"],
+      "properties": {
+        "artifact": {"$ref": "#/$defs/file"},
+        "policy": {"$ref": "#/$defs/file"},
+        "statement": {"$ref": "#/$defs/file"},
+        "statement_bundle": {"$ref": "#/$defs/file"},
+        "svr": {"$ref": "#/$defs/file"},
+        "svr_bundle": {"$ref": "#/$defs/file"}
+      }
+    },
+    "signer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence_refs", "execution_ref", "execution_sha", "identity", "issuer", "repository", "trigger", "workflow"],
+      "properties": {
+        "evidence_refs": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "execution_ref": {"type": "string", "minLength": 1},
+        "execution_sha": {"type": "string", "minLength": 1},
+        "identity": {"type": "string", "minLength": 1},
+        "issuer": {"type": "string", "minLength": 1},
+        "repository": {"type": "string", "minLength": 1},
+        "trigger": {"type": "string", "minLength": 1},
+        "workflow": {"type": "string", "minLength": 1}
+      }
+    }
+  },
+  "$defs": {
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["digest", "path"],
+      "properties": {
+        "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "path": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

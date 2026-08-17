@@ -1,0 +1,37 @@
+{
+  "allowed_crypto_verifiers": [
+    "sigstore-cosign"
+  ],
+  "allowed_identity_patterns": [
+    "https://github.com/nulleimy/HOWEDO/.github/workflows/consolidation.yml@refs/heads/main"
+  ],
+  "allowed_issuers": [
+    "https://token.actions.githubusercontent.com"
+  ],
+  "allowed_ref_patterns": [
+    "refs/heads/main"
+  ],
+  "allowed_repositories": [
+    "nulleimy/HOWEDO"
+  ],
+  "allowed_triggers": [
+    "push",
+    "workflow_dispatch"
+  ],
+  "allowed_workflows": [
+    ".github/workflows/consolidation.yml"
+  ],
+  "profile_digest": "sha256:fc7fc8d57a892cbed29a0558ef93801211e273d5fb9cd6c8c67f93ea39afd231",
+  "profile_id": "https://github.com/nulleimy/HOWEDO/policies/reference/github-actions-consumer-trust-v1",
+  "profile_version": "howedo.consumer-trust-profile.v1",
+  "require_transparency_log": true,
+  "trusted_policies": [
+    {
+      "policy_digest": "sha256:df956d0249936667287b42534030ec0594c9e84aad36f348f48614c2cee0e9d7",
+      "policy_id": "https://github.com/nulleimy/HOWEDO/policies/reference/github-actions-conformance-trust-v1"
+    }
+  ],
+  "trusted_svr_verifier_ids": [
+    "https://github.com/nulleimy/HOWEDO/verifiers/attestation-trust/v1"
+  ]
+}

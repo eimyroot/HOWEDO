@@ -16,6 +16,8 @@ howedo-verify-conformance = "howedo.certification_cli:main"
 howedo-build-attestation = "howedo.attestation_cli:build_main"
 howedo-verify-attestation = "howedo.attestation_cli:verify_main"
 howedo-verify-sigstore-trust = "howedo.trust_cli:sigstore_main"
+howedo-build-certification-package = "howedo.consumer_cli:build_main"
+howedo-verify-certification-package = "howedo.consumer_cli:verify_main"
 
 [project.optional-dependencies]
 postgres = ["psycopg[binary]>=3.2,<4"]
