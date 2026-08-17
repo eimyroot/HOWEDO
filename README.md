@@ -30,7 +30,7 @@ Every continuity check resolves to one of:
 - **Decision Engine** — deterministic continuity decisions.
 - **Continuity Witness** — reproducible evidence of each decision.
 
-## R0-R13 baseline
+## R0-R14 baseline
 
 The current development baseline contains:
 
@@ -60,7 +60,9 @@ The current development baseline contains:
 - portable `howedo.certification-package.v1` evidence packages;
 - independent consumer replay of the R9 → R11 chain, including cryptographically verified GitHub workflow-name claims and pinned consumer-profile digests;
 - optional TUF trust-root distribution and rotation for consumer trust profiles;
-- content-addressed `howedo.trust-distribution-receipt.v1` update evidence.
+- content-addressed `howedo.trust-distribution-receipt.v1` update evidence;
+- content-addressed `howedo.trust-root-publication-policy.v1` and `howedo.trust-root-publication-manifest.v1` contracts;
+- complete public TUF root-history verification plus an offline production root-ceremony / rotation / compromise runbook.
 
 ## Installation profiles
 
@@ -70,7 +72,7 @@ The core package has no required runtime or cryptography dependencies:
 pip install howedo-continuity
 ```
 
-The adapter contract, conformance kit, artifact verifier, attestation statement builder/verifier, trust policy engine, consumer certification verifier, trust-distribution contract, and SDK helpers are part of core and do not require a runtime vendor SDK or signing library merely to import HOWEDO.
+The adapter contract, conformance kit, artifact verifier, attestation statement builder/verifier, trust policy engine, consumer certification verifier, trust-distribution contract, trust-root publication contract, and SDK helpers are part of core and do not require a runtime vendor SDK or signing library merely to import HOWEDO. Executing TUF cryptographic verification requires the optional `tuf` profile.
 
 Optional integrations are isolated extras:
 
@@ -229,6 +231,38 @@ HOWEDO does not implement a TUF-like metadata format, repository server, PKI, or
 
 See `docs/adr/ADR-0014-tuf-trust-root-distribution.md`.
 
+## Production trust-root publication
+
+R14 turns the R13 bootstrap/rotation mechanism into a verifiable public trust-root publication contract without moving production private keys into HOWEDO, GitHub, or CI.
+
+```text
+public TUF root history 1..N
+        ↓
+root v1 self-threshold verification
+        ↓
+N → N+1 old + new threshold verification
+        ↓
+HOWEDO production publication policy
+        ├── minimum root key count / threshold
+        ├── consistent snapshots
+        ├── disjoint top-level role key IDs
+        ├── HTTPS publication endpoints
+        └── minimum remaining root validity
+        ↓
+content-addressed publication manifest
+```
+
+Reference commands:
+
+```bash
+howedo-build-trust-root-publication ...
+howedo-verify-trust-root-publication ...
+```
+
+The R14 software publication mechanism is part of the R0-R14 development baseline. **Production activation is separate:** a real production root ceremony, production public root v1, publication endpoints, and production TUF repository are not created by normal HOWEDO CI. No production private root key is generated or stored by this repository workflow.
+
+See `docs/trust-root-publication-v1.md`, `docs/operations/TUF_ROOT_CEREMONY.md`, and `docs/adr/ADR-0015-production-trust-root-publication.md`.
+
 ## Canonical change channel
 
 Canonical `main` is protected by the active repository ruleset **`HOWEDO canonical main protection`** (ruleset id `20928865`). The ruleset has no bypass actors and requires the exact GitHub Actions checks used by the project before merge.
@@ -247,7 +281,7 @@ See `docs/governance/CANONICAL_CHANNEL_PROTECTION.md`.
 - LangGraph OSS — exact checkpoint binding and HOWEDO-gated resume through the public LangGraph API.
 - Temporal OSS — exact workflow-run binding and HOWEDO-gated signal delivery through the public Temporal Python SDK.
 - Sigstore/Cosign — external cryptographic verification for the R10–R12 reference trust flow.
-- The Update Framework (TUF) — optional consumer trust-profile bootstrap, distribution, integrity, freshness, and root-rotation substrate.
+- The Update Framework (TUF) — optional consumer trust-profile bootstrap, distribution, integrity, freshness, root rotation, and public trust-root publication verification substrate.
 
 The Temporal adapter deliberately binds `namespace + workflow_id + run_id`. A continuation request is never redirected to an unrelated or successor run merely because it shares the same workflow ID. The bound run must still be `RUNNING`, and HOWEDO recovery validity must resolve to `RECOVER`, before the adapter sends the signal.
 

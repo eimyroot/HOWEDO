@@ -1,0 +1,11 @@
+{
+  "minimum_root_keys": 3,
+  "minimum_root_threshold": 2,
+  "minimum_root_validity_days": 180,
+  "policy_id": "howedo.production-tuf-publication.v1",
+  "policy_version": "howedo.trust-root-publication-policy.v1",
+  "require_consistent_snapshot": true,
+  "require_disjoint_role_keys": true,
+  "require_https_endpoints": true,
+  "required_spec_major": 1
+}
