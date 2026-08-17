@@ -1,5 +1,16 @@
 from __future__ import annotations
 
+from howedo.adapter_certification import (
+    CONFORMANCE_ARTIFACT_VERSION,
+    CONFORMANCE_CHECKS_V1,
+    AdapterConformanceArtifactBuilder,
+    ArtifactVerification,
+    ArtifactVerificationCode,
+    ConformanceArtifact,
+    ConformanceEnvironment,
+    ConformanceStatus,
+    verify_conformance_record,
+)
 from howedo.adapter_conformance import (
     AdapterConformanceSuite,
     AdapterFixture,
@@ -20,16 +31,25 @@ from howedo.adapter_contract import (
 
 __all__ = [
     "ADAPTER_CONTRACT_VERSION",
+    "CONFORMANCE_ARTIFACT_VERSION",
+    "CONFORMANCE_CHECKS_V1",
     "AdapterBinding",
     "AdapterCapability",
+    "AdapterConformanceArtifactBuilder",
     "AdapterConformanceSuite",
     "AdapterContractError",
     "AdapterFailureCode",
     "AdapterFixture",
     "AdapterManifest",
     "AdapterResumeBlocked",
+    "ArtifactVerification",
+    "ArtifactVerificationCode",
+    "ConformanceArtifact",
+    "ConformanceEnvironment",
     "ConformanceResult",
+    "ConformanceStatus",
     "RuntimeAdapterV1",
     "RuntimeIdentity",
     "require_recover",
+    "verify_conformance_record",
 ]
