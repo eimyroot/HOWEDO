@@ -52,7 +52,7 @@ class LangGraphFixture:
     target: Any
     resources: tuple[ResourceRevision, ...]
     current_heads: dict[str, ResourceRevision]
-    continuation: Any = Command(resume=True)
+    continuation: Any
 
     async def changed_heads(self) -> dict[str, ResourceRevision]:
         return {"policy://deploy": revision("policy://deploy", "2")}
@@ -70,6 +70,7 @@ def test_langgraph_reference_bridge_passes_runtime_adapter_v1() -> None:
             target=config,
             resources=(policy,),
             current_heads={policy.resource_id: policy},
+            continuation=Command(resume=True),
         )
         results = await AdapterConformanceSuite().run(
             LangGraphRuntimeAdapterV1(),
