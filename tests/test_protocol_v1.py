@@ -3,8 +3,12 @@ from pathlib import Path
 
 import pytest
 
-from howedo import PROTOCOL_VERSION, WitnessRecord, canonical_digest, canonical_json
-
+from howedo import (
+    PROTOCOL_VERSION,
+    WitnessRecord,
+    canonical_digest,
+    canonical_json,
+)
 
 SCHEMA_DIR = Path(__file__).parents[1] / "schemas" / "v1"
 
