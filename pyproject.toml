@@ -18,11 +18,13 @@ howedo-verify-attestation = "howedo.attestation_cli:verify_main"
 howedo-verify-sigstore-trust = "howedo.trust_cli:sigstore_main"
 howedo-build-certification-package = "howedo.consumer_cli:build_main"
 howedo-verify-certification-package = "howedo.consumer_cli:verify_main"
+howedo-fetch-consumer-trust-profile = "howedo.trust_distribution_cli:main"
 
 [project.optional-dependencies]
 postgres = ["psycopg[binary]>=3.2,<4"]
 langgraph = ["langgraph>=1.2,<2"]
 temporal = ["temporalio>=1.31,<2"]
+tuf = ["tuf>=7,<8", "securesystemslib[crypto]>=1.4,<2"]
 dev = ["pytest>=8", "ruff>=0.9"]
 
 [tool.setuptools]
