@@ -24,6 +24,14 @@ class Validity(StrEnum):
     SUPERSEDED = "SUPERSEDED"
 
 
+class DriftClassification(StrEnum):
+    UNCHANGED = "UNCHANGED"
+    COMPATIBLE = "COMPATIBLE"
+    REVALIDATION_REQUIRED = "REVALIDATION_REQUIRED"
+    BREAKING = "BREAKING"
+    UNKNOWN = "UNKNOWN"
+
+
 @dataclass(frozen=True, slots=True)
 class ResourceRevision:
     resource_id: str
