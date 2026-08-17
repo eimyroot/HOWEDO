@@ -13,7 +13,7 @@ An SVR is intentionally a concise verification result, not a complete reproducti
 
 R12 adds two small consumer-side contracts:
 
-1. `howedo.consumer-trust-profile.v1` — a content-addressed set of relying-party expectations that pins trusted SVR verifier IDs, exact R11 policy identity/digest, and allowed cryptographic signer claims.
+1. `howedo.consumer-trust-profile.v1` — a content-addressed set of relying-party expectations that pins trusted SVR verifier IDs, exact R11 policy identity/digest, and allowed cryptographic signer claims, including the expected GitHub workflow display name.
 2. `howedo.certification-package.v1` — a content-addressed transport manifest over the exact R9 artifact, R10 statement and Sigstore bundle, R11 policy, R11 SVR, and SVR Sigstore bundle.
 
 The R12 verifier independently:
@@ -21,11 +21,14 @@ The R12 verifier independently:
 - verifies every package file digest;
 - verifies R9 artifact integrity and R10 semantic binding;
 - verifies the R10 signature through external Cosign;
+- requires Cosign to verify the workflow display-name certificate claim pinned by the consumer profile;
 - evaluates the R11 policy locally;
 - deterministically replays the supplied R11 SVR;
-- verifies the R11 SVR signature through external Cosign;
+- verifies the R11 SVR signature through external Cosign with the same workflow-name expectation;
 - applies the separately supplied consumer trust profile;
 - fails closed on any mismatch.
+
+The workflow display name is a relying-party expectation, not package-supplied authority. Existing R11 signer-context and SVR digest semantics are unchanged.
 
 ## Trust-root boundary
 

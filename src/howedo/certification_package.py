@@ -339,6 +339,7 @@ def verify_certification_package(
         workflow_sha=manifest.signer.execution_sha,
         workflow_ref=manifest.signer.execution_ref,
         workflow_trigger=manifest.signer.trigger,
+        workflow_name=profile.expected_workflow_name,
     )
     statement_crypto = crypto_verifier(
         resolved["statement"],

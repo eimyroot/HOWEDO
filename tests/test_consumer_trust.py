@@ -109,6 +109,7 @@ def profile(current_policy: AttestationTrustPolicy | None = None) -> ConsumerTru
     current_policy = current_policy or policy()
     return ConsumerTrustProfile(
         profile_id="https://example.test/consumer-profile-v1",
+        expected_workflow_name="Conformance Matrix",
         trusted_svr_verifier_ids=(SVR_VERIFIER_ID,),
         trusted_policies=(
             TrustedPolicyRef(
@@ -167,6 +168,7 @@ def test_rejects_untrusted_policy_and_identity() -> None:
     current_policy = policy()
     untrusted_profile = ConsumerTrustProfile(
         profile_id="https://example.test/consumer-profile-v1",
+        expected_workflow_name="Conformance Matrix",
         trusted_svr_verifier_ids=(SVR_VERIFIER_ID,),
         trusted_policies=(
             TrustedPolicyRef(
@@ -206,10 +208,20 @@ def test_profile_record_is_content_addressed() -> None:
         ConsumerTrustProfile.from_record(tampered)
 
 
+def test_workflow_name_is_part_of_content_addressed_profile() -> None:
+    current = profile()
+    record = current.record()
+    tampered = deepcopy(record)
+    tampered["expected_workflow_name"] = "Other Workflow"
+    with pytest.raises(ValueError, match="digest mismatch"):
+        ConsumerTrustProfile.from_record(tampered)
+
+
 def test_segment_glob_does_not_cross_path_segments() -> None:
     current_policy = policy()
     wildcard_profile = ConsumerTrustProfile(
         profile_id="https://example.test/consumer-profile-v1",
+        expected_workflow_name="Conformance Matrix",
         trusted_svr_verifier_ids=(SVR_VERIFIER_ID,),
         trusted_policies=(
             TrustedPolicyRef(

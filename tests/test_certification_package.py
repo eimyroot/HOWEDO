@@ -20,7 +20,7 @@ from howedo.certification_package import (
     verify_certification_package,
 )
 from howedo.consumer_trust import ConsumerTrustProfile, TrustedPolicyRef
-from howedo.sigstore_trust import SigstoreVerificationResult
+from howedo.sigstore_trust import SigstoreGithubClaims, SigstoreVerificationResult
 from howedo.trust_policy import (
     AttestationTrustPolicy,
     SignerVerificationContext,
@@ -121,6 +121,7 @@ def _package_signer() -> CertificationSigner:
 def _profile(current_policy: AttestationTrustPolicy) -> ConsumerTrustProfile:
     return ConsumerTrustProfile(
         profile_id="https://example.test/consumer-profile-v1",
+        expected_workflow_name="Conformance Matrix",
         trusted_svr_verifier_ids=(
             "https://github.com/nulleimy/HOWEDO/verifiers/attestation-trust/v1",
         ),
@@ -224,6 +225,30 @@ def test_independent_consumer_replay_accepts_complete_chain(tmp_path: Path) -> N
     assert result.reason_codes == ()
 
 
+def test_consumer_replay_passes_pinned_workflow_name_to_crypto_verifier(
+    tmp_path: Path,
+) -> None:
+    package, current_policy = _build(tmp_path)
+    seen: list[SigstoreGithubClaims] = []
+
+    def crypto(*args: object, **kwargs: object) -> SigstoreVerificationResult:
+        del kwargs
+        claims = args[2]
+        assert isinstance(claims, SigstoreGithubClaims)
+        seen.append(claims)
+        return SigstoreVerificationResult(verified=True, verifier_id="sigstore-cosign")
+
+    result = verify_certification_package(
+        package,
+        _profile(current_policy),
+        crypto_verifier=crypto,
+    )
+
+    assert result.accepted
+    assert len(seen) == 2
+    assert all(item.workflow_name == "Conformance Matrix" for item in seen)
+
+
 def test_rejects_file_tampering_before_semantic_replay(tmp_path: Path) -> None:
     package, current_policy = _build(tmp_path)
     (package / "svr.json").write_text("{}\n")
@@ -253,6 +278,7 @@ def test_rejects_consumer_profile_that_does_not_pin_policy(tmp_path: Path) -> No
     base = _profile(current_policy)
     wrong = ConsumerTrustProfile(
         profile_id=base.profile_id,
+        expected_workflow_name=base.expected_workflow_name,
         trusted_svr_verifier_ids=base.trusted_svr_verifier_ids,
         trusted_policies=(
             TrustedPolicyRef(

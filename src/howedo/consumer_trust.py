@@ -19,6 +19,7 @@ _PROFILE_KEYS = {
     "allowed_repositories",
     "allowed_triggers",
     "allowed_workflows",
+    "expected_workflow_name",
     "profile_digest",
     "profile_id",
     "profile_version",
@@ -59,6 +60,7 @@ class TrustedPolicyRef:
 @dataclass(frozen=True, slots=True)
 class ConsumerTrustProfile:
     profile_id: str
+    expected_workflow_name: str
     trusted_svr_verifier_ids: tuple[str, ...]
     trusted_policies: tuple[TrustedPolicyRef, ...]
     allowed_crypto_verifiers: tuple[str, ...]
@@ -76,6 +78,8 @@ class ConsumerTrustProfile:
             raise ValueError("unsupported consumer trust profile version")
         if not self.profile_id:
             raise ValueError("profile_id must be non-empty")
+        if not self.expected_workflow_name:
+            raise ValueError("expected_workflow_name must be non-empty")
         for values in (
             self.trusted_svr_verifier_ids,
             self.allowed_crypto_verifiers,
@@ -101,6 +105,7 @@ class ConsumerTrustProfile:
             "allowed_repositories": list(self.allowed_repositories),
             "allowed_triggers": list(self.allowed_triggers),
             "allowed_workflows": list(self.allowed_workflows),
+            "expected_workflow_name": self.expected_workflow_name,
             "profile_id": self.profile_id,
             "profile_version": self.profile_version,
             "require_transparency_log": self.require_transparency_log,
@@ -135,6 +140,7 @@ class ConsumerTrustProfile:
             )
         profile = cls(
             profile_id=_required_string(record, "profile_id"),
+            expected_workflow_name=_required_string(record, "expected_workflow_name"),
             trusted_svr_verifier_ids=_string_tuple(record, "trusted_svr_verifier_ids"),
             trusted_policies=tuple(policies),
             allowed_crypto_verifiers=_string_tuple(record, "allowed_crypto_verifiers"),

@@ -15,8 +15,10 @@ The consumer trust profile pins:
 - trusted R11 SVR verifier IDs;
 - exact trusted R11 policy ID + content digest;
 - allowed external crypto verifier IDs;
-- issuer, signer identity, repository, workflow, ref, and trigger expectations;
+- issuer, signer identity, repository, workflow path, workflow display name, ref, and trigger expectations;
 - transparency-log requirement.
+
+The workflow display name is passed to Cosign as a certificate claim expectation. It is not accepted from package metadata as a substitute for cryptographic verification.
 
 The profile is content-addressed. It is a relying-party expectation file, not a PKI and not a replacement for TUF or another root-distribution system.
 
@@ -76,6 +78,7 @@ package digests
 AND R9 integrity
 AND R10 semantic binding
 AND R10 external signature verification
+AND cryptographically verified workflow display name
 AND consumer signer expectations
 AND independent R11 policy replay
 AND deterministic R11 SVR replay

@@ -12,6 +12,7 @@
     "allowed_repositories",
     "allowed_triggers",
     "allowed_workflows",
+    "expected_workflow_name",
     "profile_digest",
     "profile_id",
     "profile_version",
@@ -23,6 +24,7 @@
     "profile_version": {"const": "howedo.consumer-trust-profile.v1"},
     "profile_id": {"type": "string", "minLength": 1},
     "profile_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "expected_workflow_name": {"type": "string", "minLength": 1},
     "trusted_svr_verifier_ids": {"$ref": "#/$defs/nonEmptyStrings"},
     "trusted_policies": {
       "type": "array",

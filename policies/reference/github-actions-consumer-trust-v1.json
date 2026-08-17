@@ -21,7 +21,8 @@
   "allowed_workflows": [
     ".github/workflows/consolidation.yml"
   ],
-  "profile_digest": "sha256:fc7fc8d57a892cbed29a0558ef93801211e273d5fb9cd6c8c67f93ea39afd231",
+  "expected_workflow_name": "Conformance Matrix",
+  "profile_digest": "sha256:312018c9e05bfdb9ffddf0f71ad80c3002ab185c90cc605e3295a2a0dd34d5a5",
   "profile_id": "https://github.com/nulleimy/HOWEDO/policies/reference/github-actions-consumer-trust-v1",
   "profile_version": "howedo.consumer-trust-profile.v1",
   "require_transparency_log": true,

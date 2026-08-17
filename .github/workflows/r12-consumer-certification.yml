@@ -24,7 +24,7 @@ jobs:
       HOWEDO_R11_SOURCE_ISSUER: "https://token.actions.githubusercontent.com"
       HOWEDO_R11_POLICY: "policies/reference/github-actions-conformance-trust-v1.json"
       HOWEDO_CONSUMER_PROFILE: "policies/reference/github-actions-consumer-trust-v1.json"
-      HOWEDO_EXPECTED_CONSUMER_PROFILE_DIGEST: "sha256:fc7fc8d57a892cbed29a0558ef93801211e273d5fb9cd6c8c67f93ea39afd231"
+      HOWEDO_EXPECTED_CONSUMER_PROFILE_DIGEST: "sha256:312018c9e05bfdb9ffddf0f71ad80c3002ab185c90cc605e3295a2a0dd34d5a5"
     steps:
       - uses: actions/checkout@v4
 
@@ -79,6 +79,7 @@ jobs:
           assert profile["profile_digest"] == os.environ[
               "HOWEDO_EXPECTED_CONSUMER_PROFILE_DIGEST"
           ]
+          assert profile["expected_workflow_name"] == "Conformance Matrix"
           print("HOWEDO_R12_SCHEMA_AND_PROFILE_FREEZE=PASS")
           PY
 
