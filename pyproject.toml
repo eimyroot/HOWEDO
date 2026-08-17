@@ -14,6 +14,7 @@ dependencies = []
 [project.optional-dependencies]
 postgres = ["psycopg[binary]>=3.2,<4"]
 langgraph = ["langgraph>=1.2,<2"]
+temporal = ["temporalio>=1.31,<2"]
 dev = ["pytest>=8", "ruff>=0.9"]
 
 [tool.setuptools]
