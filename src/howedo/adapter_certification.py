@@ -7,6 +7,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from hashlib import sha256
+from pathlib import Path
 from typing import Any
 
 from howedo.adapter_conformance import AdapterConformanceSuite, AdapterFixture, ConformanceResult
@@ -26,6 +27,16 @@ CONFORMANCE_CHECKS_V1 = (
     "changed-reality-does-not-recover",
     "continue-after-recover",
 )
+_RECORD_KEYS = {
+    "artifact_digest",
+    "artifact_version",
+    "checks",
+    "environment",
+    "evidence_refs",
+    "manifest",
+    "manifest_digest",
+    "status",
+}
 
 
 class ConformanceStatus(StrEnum):
@@ -116,6 +127,12 @@ class ConformanceArtifact:
     def to_json(self) -> str:
         return json.dumps(self.record(), sort_keys=True, separators=(",", ":"))
 
+    def write(self, path: str | Path) -> Path:
+        target = Path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(self.to_json() + "\n")
+        return target
+
 
 @dataclass(frozen=True, slots=True)
 class ArtifactVerification:
@@ -148,6 +165,9 @@ def verify_conformance_record(record: Mapping[str, Any]) -> ArtifactVerification
 
     reasons: list[ArtifactVerificationCode] = []
     try:
+        if set(record) != _RECORD_KEYS:
+            reasons.append(ArtifactVerificationCode.INVALID_RECORD)
+
         canonical = dict(record)
         supplied_digest = canonical.pop("artifact_digest")
         if canonical.get("artifact_version") != CONFORMANCE_ARTIFACT_VERSION:
@@ -156,6 +176,8 @@ def verify_conformance_record(record: Mapping[str, Any]) -> ArtifactVerification
             reasons.append(ArtifactVerificationCode.ARTIFACT_DIGEST_MISMATCH)
 
         manifest_data = canonical["manifest"]
+        if not isinstance(manifest_data, Mapping):
+            raise TypeError("manifest must be an object")
         manifest = AdapterManifest.build(
             adapter_id=str(manifest_data["adapter_id"]),
             runtime_family=str(manifest_data["runtime_family"]),
@@ -164,23 +186,49 @@ def verify_conformance_record(record: Mapping[str, Any]) -> ArtifactVerification
                 AdapterCapability(str(value)) for value in manifest_data["capabilities"]
             ),
         )
-        if manifest_data["contract_version"] != manifest.contract_version:
-            reasons.append(ArtifactVerificationCode.MANIFEST_DIGEST_MISMATCH)
+        if dict(manifest_data) != _manifest_record(manifest):
+            reasons.append(ArtifactVerificationCode.INVALID_RECORD)
         if canonical.get("manifest_digest") != manifest.digest():
             reasons.append(ArtifactVerificationCode.MANIFEST_DIGEST_MISMATCH)
 
         checks = canonical["checks"]
+        if not isinstance(checks, list):
+            raise TypeError("checks must be an array")
+        for item in checks:
+            if not isinstance(item, Mapping) or set(item) != {"check", "detail", "passed"}:
+                reasons.append(ArtifactVerificationCode.INVALID_RECORD)
+                continue
+            if not isinstance(item["check"], str) or not isinstance(item["detail"], str):
+                reasons.append(ArtifactVerificationCode.INVALID_RECORD)
+            if not isinstance(item["passed"], bool):
+                reasons.append(ArtifactVerificationCode.INVALID_RECORD)
+
         check_names = tuple(str(item["check"]) for item in checks)
         if check_names != CONFORMANCE_CHECKS_V1:
             reasons.append(ArtifactVerificationCode.CHECK_SET_MISMATCH)
 
         expected_status = (
             ConformanceStatus.CONFORMANT.value
-            if all(bool(item["passed"]) for item in checks)
+            if all(item["passed"] is True for item in checks)
             else ConformanceStatus.NON_CONFORMANT.value
         )
         if canonical.get("status") != expected_status:
             reasons.append(ArtifactVerificationCode.STATUS_MISMATCH)
+
+        evidence_refs = canonical["evidence_refs"]
+        if not isinstance(evidence_refs, list) or any(
+            not isinstance(item, str) or not item for item in evidence_refs
+        ):
+            reasons.append(ArtifactVerificationCode.INVALID_RECORD)
+        elif evidence_refs != sorted(set(evidence_refs)):
+            reasons.append(ArtifactVerificationCode.INVALID_RECORD)
+
+        environment = canonical["environment"]
+        expected_environment_keys = {"platform", "python_implementation", "python_version"}
+        if not isinstance(environment, Mapping) or set(environment) != expected_environment_keys:
+            reasons.append(ArtifactVerificationCode.INVALID_RECORD)
+        elif any(not isinstance(environment[key], str) or not environment[key] for key in environment):
+            reasons.append(ArtifactVerificationCode.INVALID_RECORD)
     except (KeyError, TypeError, ValueError):
         reasons.append(ArtifactVerificationCode.INVALID_RECORD)
 
