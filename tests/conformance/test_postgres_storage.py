@@ -4,8 +4,9 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 from hashlib import sha256
 
-import psycopg
 import pytest
+
+psycopg = pytest.importorskip("psycopg")
 
 from howedo import ContinuityEvent, ResourceRevision, WitnessRecord, canonical_digest
 from howedo.kernel import HeadConflict, RevisionConflict
