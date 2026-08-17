@@ -52,12 +52,13 @@ class LangGraphFixture:
     target: Any
     resources: tuple[ResourceRevision, ...]
     current_heads: dict[str, ResourceRevision]
+    continuation: Any = Command(resume=True)
 
     async def changed_heads(self) -> dict[str, ResourceRevision]:
         return {"policy://deploy": revision("policy://deploy", "2")}
 
-    async def closed_target(self) -> Any:
-        return self.target
+    async def verify_continuation(self, result: Any) -> bool:
+        return bool(result["approved"] is True)
 
 
 def test_langgraph_reference_bridge_passes_runtime_adapter_v1() -> None:
@@ -70,17 +71,11 @@ def test_langgraph_reference_bridge_passes_runtime_adapter_v1() -> None:
             resources=(policy,),
             current_heads={policy.resource_id: policy},
         )
-        adapter = LangGraphRuntimeAdapterV1()
-        results = await AdapterConformanceSuite().run(adapter, fixture)
-        AdapterConformanceSuite.assert_passed(results)
-
-        binding = await adapter.capture(graph, config, resources=(policy,))
-        resumed = await adapter.continue_after_validate(
-            graph,
-            binding,
-            Command(resume=True),
-            current_heads={policy.resource_id: policy},
+        results = await AdapterConformanceSuite().run(
+            LangGraphRuntimeAdapterV1(),
+            fixture,
         )
-        assert resumed["approved"] is True
+        AdapterConformanceSuite.assert_passed(results)
+        assert next(item for item in results if item.check == "continue-after-recover").passed
 
     asyncio.run(scenario())
