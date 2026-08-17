@@ -1,6 +1,8 @@
 name: Conformance Matrix
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -250,7 +252,7 @@ jobs:
     env:
       HOWEDO_SIGNER_IDENTITY: https://github.com/${{ github.workflow_ref }}
       HOWEDO_SIGNER_ISSUER: https://token.actions.githubusercontent.com
-      HOWEDO_TRUST_POLICY: policies/reference/github-actions-conformance-trust-v1.json
+      HOWEDO_TRUST_POLICY: ${{ github.event_name == 'pull_request' && 'policies/test/github-actions-pr-conformance-trust-v1.json' || 'policies/reference/github-actions-conformance-trust-v1.json' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -343,6 +345,23 @@ jobs:
               assert "HOWEDO_ATTESTATION_TRUST_ACCEPTED" in data["predicate"]["properties"]
           print("HOWEDO_R11_TRUST_RECEIPTS=4_ACCEPTED")
           PY
+      - name: Keyless sign and verify R11 SVR receipts
+        run: |
+          count=0
+          for receipt in signed-attestations/*.svr.json; do
+            bundle="${receipt%.svr.json}.svr.sigstore.json"
+            cosign sign-blob --yes --bundle "$bundle" "$receipt"
+            cosign verify-blob "$receipt" \
+              --bundle "$bundle" \
+              --certificate-identity "$HOWEDO_SIGNER_IDENTITY" \
+              --certificate-oidc-issuer "$HOWEDO_SIGNER_ISSUER" \
+              --certificate-github-workflow-repository "$GITHUB_REPOSITORY" \
+              --certificate-github-workflow-sha "$GITHUB_SHA" \
+              --certificate-github-workflow-ref "$GITHUB_REF" \
+              --certificate-github-workflow-trigger "$GITHUB_EVENT_NAME"
+            count=$((count + 1))
+          done
+          test "$count" -eq 4
       - uses: actions/upload-artifact@v4
         with:
           name: howedo-signed-conformance-attestations
