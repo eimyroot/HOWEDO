@@ -52,72 +52,74 @@ def test_real_temporal_exact_run_safe_signal_boundary() -> None:
         policy_v2 = revision("policy://deploy", "2")
         adapter = TemporalRuntimeAdapter()
 
-        async with await WorkflowEnvironment.start_time_skipping() as env:
-            async with Worker(env.client, task_queue=task_queue, workflows=[GateWorkflow]):
-                valid = await env.client.start_workflow(
-                    GateWorkflow.run,
-                    id="howedo-temporal-valid",
-                    task_queue=task_queue,
-                )
-                binding = await adapter.capture(
-                    env.client,
-                    valid,
-                    resources=(policy_v1,),
-                )
-                assert binding.execution.run_id == valid.result_run_id
+        async with (
+            await WorkflowEnvironment.start_time_skipping() as env,
+            Worker(env.client, task_queue=task_queue, workflows=[GateWorkflow]),
+        ):
+            valid = await env.client.start_workflow(
+                GateWorkflow.run,
+                id="howedo-temporal-valid",
+                task_queue=task_queue,
+            )
+            binding = await adapter.capture(
+                env.client,
+                valid,
+                resources=(policy_v1,),
+            )
+            assert binding.execution.run_id == valid.result_run_id
 
-                decision = await adapter.signal_after_validate(
+            decision = await adapter.signal_after_validate(
+                env.client,
+                binding,
+                "resume",
+                args=(True,),
+                current_heads={policy_v1.resource_id: policy_v1},
+            )
+            assert decision.action is ContinuityAction.RECOVER
+            assert await valid.result() is True
+
+            stale = await env.client.start_workflow(
+                GateWorkflow.run,
+                id="howedo-temporal-stale",
+                task_queue=task_queue,
+            )
+            stale_binding = await adapter.capture(
+                env.client,
+                stale,
+                resources=(policy_v1,),
+            )
+
+            with pytest.raises(TemporalResumeBlocked) as exc_info:
+                await adapter.signal_after_validate(
                     env.client,
-                    binding,
+                    stale_binding,
                     "resume",
                     args=(True,),
+                    current_heads={policy_v2.resource_id: policy_v2},
+                )
+            assert exc_info.value.decision.action is ContinuityAction.REVALIDATE
+
+            await stale.signal(GateWorkflow.resume, False)
+            assert await stale.result() is False
+
+            closed = await env.client.start_workflow(
+                GateWorkflow.run,
+                id="howedo-temporal-closed",
+                task_queue=task_queue,
+            )
+            closed_binding = await adapter.capture(
+                env.client,
+                closed,
+                resources=(policy_v1,),
+            )
+            await closed.signal(GateWorkflow.resume, True)
+            assert await closed.result() is True
+
+            with pytest.raises(TemporalExecutionNotRunning):
+                await adapter.validate_resume(
+                    env.client,
+                    closed_binding,
                     current_heads={policy_v1.resource_id: policy_v1},
                 )
-                assert decision.action is ContinuityAction.RECOVER
-                assert await valid.result() is True
-
-                stale = await env.client.start_workflow(
-                    GateWorkflow.run,
-                    id="howedo-temporal-stale",
-                    task_queue=task_queue,
-                )
-                stale_binding = await adapter.capture(
-                    env.client,
-                    stale,
-                    resources=(policy_v1,),
-                )
-
-                with pytest.raises(TemporalResumeBlocked) as exc_info:
-                    await adapter.signal_after_validate(
-                        env.client,
-                        stale_binding,
-                        "resume",
-                        args=(True,),
-                        current_heads={policy_v2.resource_id: policy_v2},
-                    )
-                assert exc_info.value.decision.action is ContinuityAction.REVALIDATE
-
-                await stale.signal(GateWorkflow.resume, False)
-                assert await stale.result() is False
-
-                closed = await env.client.start_workflow(
-                    GateWorkflow.run,
-                    id="howedo-temporal-closed",
-                    task_queue=task_queue,
-                )
-                closed_binding = await adapter.capture(
-                    env.client,
-                    closed,
-                    resources=(policy_v1,),
-                )
-                await closed.signal(GateWorkflow.resume, True)
-                assert await closed.result() is True
-
-                with pytest.raises(TemporalExecutionNotRunning):
-                    await adapter.validate_resume(
-                        env.client,
-                        closed_binding,
-                        current_heads={policy_v1.resource_id: policy_v1},
-                    )
 
     asyncio.run(scenario())
