@@ -86,6 +86,34 @@ def test_release_bundle_rejects_symlink(tmp_path: Path) -> None:
         )
 
 
+def test_release_bundle_rejects_parent_symlink_escape(tmp_path: Path) -> None:
+    root = tmp_path / "bundle"
+    root.mkdir()
+    (root / "python").mkdir()
+    (root / "evidence").mkdir()
+    (root / "python/howedo_continuity-0.0.1.tar.gz").write_bytes(b"sdist")
+    (root / "evidence/howedo-continuity-0.0.1.cdx.json").write_bytes(
+        b'{"bomFormat":"CycloneDX"}'
+    )
+
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "escape.whl").write_bytes(b"wheel")
+    (root / "linked").symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(ValueError, match="missing or unsafe"):
+        build_release_bundle(
+            root=root,
+            package_version="0.0.1",
+            tag="v0.0.1",
+            git_commit="a" * 40,
+            git_tree="b" * 40,
+            wheel="linked/escape.whl",
+            sdist="python/howedo_continuity-0.0.1.tar.gz",
+            sbom="evidence/howedo-continuity-0.0.1.cdx.json",
+        )
+
+
 def test_release_bundle_rejects_manifest_digest_tamper(tmp_path: Path) -> None:
     _files(tmp_path)
     record = _manifest(tmp_path).record()
