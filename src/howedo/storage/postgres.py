@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+from collections.abc import Mapping
 from importlib.resources import files
 from typing import Any
 
@@ -276,7 +278,5 @@ class PostgresStorageAdapter:
         )
 
 
-def _json_text(payload: Any) -> str:
-    import json
-
-    return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+def _json_text(payload: Mapping[str, Any]) -> str:
+    return json.dumps(dict(payload), sort_keys=True, separators=(",", ":"), ensure_ascii=False)
