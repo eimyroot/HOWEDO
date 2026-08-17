@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 from collections.abc import Iterator
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -51,7 +51,7 @@ def _signed(metadata: Metadata, signer: CryptoSigner) -> bytes:
 def _repository(
     profile_bytes: bytes, *, dual_signed_root: bool = True
 ) -> tuple[bytes, dict[str, bytes]]:
-    expires = datetime.now(timezone.utc) + timedelta(days=30)
+    expires = datetime.now(UTC) + timedelta(days=30)
     signers = {
         role: CryptoSigner.generate_ed25519()
         for role in (Root.type, Targets.type, Snapshot.type, Timestamp.type)
