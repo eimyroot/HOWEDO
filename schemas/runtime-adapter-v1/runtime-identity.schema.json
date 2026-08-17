@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://howedo.dev/schemas/runtime-adapter-v1/runtime-identity.schema.json",
+  "title": "HOWEDO Runtime Identity v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["runtime_family", "namespace", "execution_id", "execution_revision"],
+  "properties": {
+    "runtime_family": {"type": "string", "minLength": 1},
+    "namespace": {"type": "string", "minLength": 1},
+    "execution_id": {"type": "string", "minLength": 1},
+    "execution_revision": {"type": "string", "minLength": 1}
+  }
+}

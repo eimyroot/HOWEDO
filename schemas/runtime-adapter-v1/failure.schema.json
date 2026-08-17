@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://howedo.dev/schemas/runtime-adapter-v1/failure.schema.json",
+  "title": "HOWEDO Runtime Adapter Failure v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["code", "message"],
+  "properties": {
+    "code": {
+      "enum": [
+        "IDENTITY_UNRESOLVED",
+        "IDENTITY_MISMATCH",
+        "EXECUTION_NOT_CONTINUABLE",
+        "CONTINUITY_BLOCKED",
+        "UNSUPPORTED_CAPABILITY",
+        "PROTOCOL_VIOLATION"
+      ]
+    },
+    "message": {"type": "string", "minLength": 1}
+  }
+}

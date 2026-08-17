@@ -30,7 +30,7 @@ Every continuity check resolves to one of:
 - **Decision Engine** — deterministic continuity decisions.
 - **Continuity Witness** — reproducible evidence of each decision.
 
-## R0-R7 baseline
+## R0-R8 baseline
 
 The current development baseline contains:
 
@@ -42,7 +42,10 @@ The current development baseline contains:
 - stable `howedo.protocol.v1` schemas;
 - optional PostgreSQL reference persistence adapter;
 - optional LangGraph OSS runtime adapter;
-- optional Temporal OSS Python runtime adapter.
+- optional Temporal OSS Python runtime adapter;
+- vendor-neutral `howedo.runtime-adapter.v1` contract;
+- executable runtime-adapter conformance kit;
+- third-party adapter SDK surface and reference bridges.
 
 ## Installation profiles
 
@@ -52,7 +55,9 @@ The core package has no required runtime dependencies:
 pip install howedo-continuity
 ```
 
-Optional adapters are isolated extras:
+The adapter contract, conformance kit, and SDK helpers are part of core and do not require a runtime vendor SDK.
+
+Optional reference adapters are isolated extras:
 
 ```bash
 pip install 'howedo-continuity[postgres]'
@@ -60,6 +65,26 @@ pip install 'howedo-continuity[langgraph]'
 pip install 'howedo-continuity[temporal]'
 pip install 'howedo-continuity[postgres,langgraph,temporal]'
 ```
+
+## Runtime adapter contract
+
+`howedo.runtime-adapter.v1` defines the narrow interoperability boundary for external runtimes:
+
+```text
+exact runtime identity
+        ↓
+capture HOWEDO recovery binding
+        ↓
+validate against current reality
+        ↓
+RECOVER only
+        ↓
+continue exact bound execution
+```
+
+A conforming adapter declares a content-addressed capability manifest and exposes exact identity, capture, validation, and continuation operations. The shared conformance kit verifies the vendor-neutral invariants; runtime-specific tests remain responsible for proving exact targeting and lifecycle behavior.
+
+See `docs/runtime-adapter-v1.md`, `docs/third-party-adapters.md`, and `examples/third_party_runtime_adapter.py`.
 
 ## Integrations
 
