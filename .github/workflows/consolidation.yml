@@ -90,10 +90,10 @@ jobs:
               python -c 'from howedo.storage.postgres import PostgresStorageAdapter; print("POSTGRES_ADAPTER_IMPORT=PASS")'
               ;;
             langgraph)
-              python -c 'from howedo.adapters.langgraph import LangGraphAdapter; print("LANGGRAPH_ADAPTER_IMPORT=PASS")'
+              python -c 'from howedo.adapters.langgraph import LangGraphRuntimeAdapter; print("LANGGRAPH_ADAPTER_IMPORT=PASS")'
               ;;
             all)
-              python -c 'from howedo.storage.postgres import PostgresStorageAdapter; from howedo.adapters.langgraph import LangGraphAdapter; print("ALL_ADAPTER_IMPORTS=PASS")'
+              python -c 'from howedo.storage.postgres import PostgresStorageAdapter; from howedo.adapters.langgraph import LangGraphRuntimeAdapter; print("ALL_ADAPTER_IMPORTS=PASS")'
               ;;
             dev)
               python -c 'import howedo; print("DEV_CORE_IMPORT=PASS")'
