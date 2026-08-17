@@ -30,7 +30,7 @@ Every continuity check resolves to one of:
 - **Decision Engine** — deterministic continuity decisions.
 - **Continuity Witness** — reproducible evidence of each decision.
 
-## R0-R11 baseline
+## R0-R12 baseline
 
 The current development baseline contains:
 
@@ -55,7 +55,10 @@ The current development baseline contains:
 - content-addressed `howedo.attestation-trust-policy.v1` consumer policies;
 - deterministic `ACCEPT` / `REJECT` attestation trust evaluation;
 - Sigstore/Cosign reference crypto-verifier adapter;
-- standard in-toto Simple Verification Result v0.2 trust receipts.
+- standard in-toto Simple Verification Result v0.2 trust receipts;
+- content-addressed `howedo.consumer-trust-profile.v1` relying-party expectations;
+- portable `howedo.certification-package.v1` evidence packages;
+- independent consumer replay of the R9 → R11 chain, including cryptographically verified GitHub workflow-name claims and pinned consumer-profile digests.
 
 ## Installation profiles
 
@@ -65,7 +68,7 @@ The core package has no required runtime or cryptography dependencies:
 pip install howedo-continuity
 ```
 
-The adapter contract, conformance kit, artifact verifier, attestation statement builder/verifier, trust policy engine, and SDK helpers are part of core and do not require a runtime vendor SDK or signing library.
+The adapter contract, conformance kit, artifact verifier, attestation statement builder/verifier, trust policy engine, consumer certification verifier, and SDK helpers are part of core and do not require a runtime vendor SDK or signing library.
 
 Optional reference adapters are isolated extras:
 
@@ -199,6 +202,42 @@ The production reference policy accepts only the canonical workflow on `refs/hea
 
 See `docs/attestation-trust-policy-v1.md` and `docs/adr/ADR-0012-attestation-trust-policy.md`.
 
+## Consumer certification replay
+
+R12 lets a relying consumer verify the certification chain independently instead of trusting a producer-generated `ACCEPT` as an oracle:
+
+```text
+portable certification package
+        ↓
+consumer-pinned trust profile
+        ↓
+file-digest verification
+        ↓
+R9 integrity + R10 semantic replay
+        ↓
+R10 Sigstore verification
+        ↓
+exact trusted R11 policy identity/digest
+        ↓
+local R11 policy + deterministic SVR replay
+        ↓
+R11 SVR Sigstore verification
+        ↓
+ACCEPT / REJECT
+```
+
+`howedo.consumer-trust-profile.v1` pins relying-party expectations independently of the package. `howedo.certification-package.v1` is transport/index material over the authenticated R9/R10/R11 evidence; it is not a new PKI or a producer-controlled trust root.
+
+The reference consumer verifier also pins the GitHub workflow display name as a cryptographically verified certificate claim and requires the expected consumer-profile digest to be supplied independently of the profile file.
+
+See `docs/consumer-certification-v1.md` and `docs/adr/ADR-0013-consumer-certification-replay.md`.
+
+## Canonical change channel
+
+Changes to canonical `main` are intended to flow through pull requests and the repository trust gates. `Canonical Channel` detects a `main` push that is not associated with a merged pull request and rejects force-push provenance in CI. This check becomes preventive only when GitHub branch protection or a repository ruleset requires it.
+
+See `docs/governance/CANONICAL_CHANNEL_PROTECTION.md` and issue #15.
+
 ## Integrations
 
 **Implemented reference adapters:**
@@ -206,7 +245,7 @@ See `docs/attestation-trust-policy-v1.md` and `docs/adr/ADR-0012-attestation-tru
 - PostgreSQL — persistence/reference storage adapter.
 - LangGraph OSS — exact checkpoint binding and HOWEDO-gated resume through the public LangGraph API.
 - Temporal OSS — exact workflow-run binding and HOWEDO-gated signal delivery through the public Temporal Python SDK.
-- Sigstore/Cosign — external cryptographic verification adapter for the R11 reference trust flow.
+- Sigstore/Cosign — external cryptographic verification adapter for the R11/R12 reference trust flow.
 
 The Temporal adapter deliberately binds `namespace + workflow_id + run_id`. A continuation request is never redirected to an unrelated or successor run merely because it shares the same workflow ID. The bound run must still be `RUNNING`, and HOWEDO recovery validity must resolve to `RECOVER`, before the adapter sends the signal.
 
