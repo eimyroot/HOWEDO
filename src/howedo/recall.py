@@ -88,6 +88,11 @@ class RecallEngine:
             while queue:
                 source_id = queue.popleft()
                 for dependent_id in graph.dependents(source_id):
+                    # A dependency cycle must never feed a changed source back into
+                    # its own invalidation set. The authoritative new head is valid;
+                    # only state derived from the previous head becomes stale.
+                    if dependent_id == root_id:
+                        continue
                     states[dependent_id] = self._merge(states.get(dependent_id), propagated)
                     causes[dependent_id].add(reason)
                     if dependent_id not in visited:
