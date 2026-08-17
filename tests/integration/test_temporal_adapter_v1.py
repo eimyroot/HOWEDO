@@ -65,6 +65,15 @@ class TemporalFixture:
         return bool(await self.target.result())
 
 
+def evidence_refs() -> tuple[str, ...]:
+    refs = ["test://temporal-real-run"]
+    if run_id := os.environ.get("GITHUB_RUN_ID"):
+        refs.append(f"github-actions://run/{run_id}")
+    if sha := os.environ.get("GITHUB_SHA"):
+        refs.append(f"git://sha/{sha}")
+    return tuple(sorted(refs))
+
+
 def test_temporal_reference_bridge_issues_conformance_artifact() -> None:
     async def scenario() -> None:
         task_queue = "howedo-r9-conformance-artifact"
@@ -90,7 +99,7 @@ def test_temporal_reference_bridge_issues_conformance_artifact() -> None:
             artifact = await AdapterConformanceArtifactBuilder().build(
                 adapter,
                 fixture,
-                evidence_refs=("test://temporal-real-run",),
+                evidence_refs=evidence_refs(),
             )
             assert artifact.status is ConformanceStatus.CONFORMANT
             assert verify_conformance_record(artifact.record()).valid
