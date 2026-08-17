@@ -17,7 +17,11 @@ from temporalio import workflow
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
-from howedo.adapter_conformance import AdapterConformanceSuite
+from howedo.adapter_certification import (
+    AdapterConformanceArtifactBuilder,
+    ConformanceStatus,
+    verify_conformance_record,
+)
 from howedo.adapters.temporal_v1 import TemporalRuntimeAdapterV1
 from howedo.domain import ResourceRevision
 
@@ -60,9 +64,9 @@ class TemporalFixture:
         return bool(await self.target.result())
 
 
-def test_temporal_reference_bridge_passes_runtime_adapter_v1() -> None:
+def test_temporal_reference_bridge_issues_conformance_artifact() -> None:
     async def scenario() -> None:
-        task_queue = "howedo-r8-contract"
+        task_queue = "howedo-r9-conformance-artifact"
         policy = revision("policy://deploy", "1")
         adapter = TemporalRuntimeAdapterV1()
 
@@ -73,7 +77,7 @@ def test_temporal_reference_bridge_passes_runtime_adapter_v1() -> None:
         ):
             handle = await env.client.start_workflow(
                 ContractWorkflow.run,
-                id="howedo-r8-contract",
+                id="howedo-r9-conformance-artifact",
                 task_queue=task_queue,
             )
             fixture = TemporalFixture(
@@ -82,8 +86,13 @@ def test_temporal_reference_bridge_passes_runtime_adapter_v1() -> None:
                 resources=(policy,),
                 current_heads={policy.resource_id: policy},
             )
-            results = await AdapterConformanceSuite().run(adapter, fixture)
-            AdapterConformanceSuite.assert_passed(results)
-            assert next(item for item in results if item.check == "continue-after-recover").passed
+            artifact = await AdapterConformanceArtifactBuilder().build(
+                adapter,
+                fixture,
+                evidence_refs=("test://temporal-real-run",),
+            )
+            assert artifact.status is ConformanceStatus.CONFORMANT
+            assert verify_conformance_record(artifact.record()).valid
+            assert artifact.manifest.runtime_family == "temporal"
 
     asyncio.run(scenario())
