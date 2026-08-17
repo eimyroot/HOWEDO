@@ -23,6 +23,10 @@ class UnknownResource(KeyError):
     """Raised when a requested resource has no authoritative head."""
 
 
+class HeadConflict(ValueError):
+    """Raised when head activation is attempted against a stale expected head."""
+
+
 @dataclass(slots=True)
 class StateRegistry:
     _revisions: dict[tuple[str, str], ResourceRevision] = field(default_factory=dict)
@@ -38,6 +42,24 @@ class StateRegistry:
         self._revisions[key] = revision
         if make_head:
             self._heads[revision.resource_id] = revision
+
+    def activate_if_head(
+        self,
+        *,
+        expected: ResourceRevision,
+        replacement: ResourceRevision,
+    ) -> None:
+        """Reference compare-and-set semantics for head activation.
+
+        Persistent adapters must provide the same check-and-set atomically in
+        their own transaction boundary.
+        """
+        if expected.resource_id != replacement.resource_id:
+            raise ValueError("replacement must target the same resource")
+        current = self.head(expected.resource_id)
+        if current != expected:
+            raise HeadConflict(f"stale expected head for {expected.resource_id}")
+        self.register(replacement, make_head=True)
 
     def head(self, resource_id: str) -> ResourceRevision:
         try:
