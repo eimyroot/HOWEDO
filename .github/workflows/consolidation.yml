@@ -37,13 +37,15 @@ jobs:
         run: |
           python - <<'PY'
           import howedo
+          import howedo.adapter_certification
           import howedo.adapter_contract
           import howedo.adapter_conformance
           import howedo.adapter_sdk
+          import howedo.certification_cli
           import howedo.domain
           import howedo.recovery
           import howedo.runtime
-          print("HOWEDO_CORE_AND_ADAPTER_SDK_IMPORT=PASS")
+          print("HOWEDO_CORE_ADAPTER_SDK_AND_CERTIFICATION_IMPORT=PASS")
           PY
 
   profile-conformance:
@@ -138,6 +140,48 @@ jobs:
           assert actual == expected, f"runtime-adapter-v1 schema drift: {sorted(actual)}"
           print("RUNTIME_ADAPTER_V1_SCHEMA_SET=PASS")
           PY
+      - name: Freeze adapter-conformance-v1 schema filenames
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          expected = {"conformance-artifact.schema.json"}
+          actual = {p.name for p in Path("schemas/adapter-conformance-v1").glob("*.json")}
+          assert actual == expected, f"adapter-conformance-v1 schema drift: {sorted(actual)}"
+          print("ADAPTER_CONFORMANCE_V1_SCHEMA_SET=PASS")
+          PY
+
+  langgraph-integration:
+    name: langgraph conformance artifact (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    env:
+      HOWEDO_CONFORMANCE_ARTIFACT_DIR: artifacts
+      HOWEDO_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install LangGraph profile
+        run: python -m pip install -e '.[dev,langgraph]'
+      - name: Ruff
+        run: ruff check .
+      - name: Generate LangGraph conformance artifact
+        run: pytest tests/integration/test_langgraph_adapter_v1.py
+      - name: Verify generated artifact with core CLI
+        run: |
+          artifact="$(find artifacts -name 'langgraph-*.json' -print -quit)"
+          test -n "$artifact"
+          howedo-verify-conformance "$artifact"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: howedo-langgraph-conformance-${{ matrix.python-version }}
+          path: artifacts/*.json
+          if-no-files-found: error
 
   temporal-integration:
     name: temporal real integration (${{ matrix.python-version }})
@@ -148,6 +192,8 @@ jobs:
         python-version: ["3.12", "3.13"]
     env:
       HOWEDO_TEST_TEMPORAL: "1"
+      HOWEDO_CONFORMANCE_ARTIFACT_DIR: artifacts
+      HOWEDO_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -160,3 +206,13 @@ jobs:
         run: ruff check .
       - name: Real Temporal safe-resume and adapter-v1 conformance
         run: pytest tests/integration/test_temporal_adapter.py tests/integration/test_temporal_adapter_v1.py
+      - name: Verify generated artifact with core CLI
+        run: |
+          artifact="$(find artifacts -name 'temporal-*.json' -print -quit)"
+          test -n "$artifact"
+          howedo-verify-conformance "$artifact"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: howedo-temporal-conformance-${{ matrix.python-version }}
+          path: artifacts/*.json
+          if-no-files-found: error

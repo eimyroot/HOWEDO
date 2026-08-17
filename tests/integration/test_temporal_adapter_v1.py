@@ -4,6 +4,7 @@ import asyncio
 import os
 from dataclasses import dataclass
 from hashlib import sha256
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -17,7 +18,11 @@ from temporalio import workflow
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
-from howedo.adapter_conformance import AdapterConformanceSuite
+from howedo.adapter_certification import (
+    AdapterConformanceArtifactBuilder,
+    ConformanceStatus,
+    verify_conformance_record,
+)
 from howedo.adapters.temporal_v1 import TemporalRuntimeAdapterV1
 from howedo.domain import ResourceRevision
 
@@ -60,9 +65,20 @@ class TemporalFixture:
         return bool(await self.target.result())
 
 
-def test_temporal_reference_bridge_passes_runtime_adapter_v1() -> None:
+def evidence_refs() -> tuple[str, ...]:
+    refs = ["test://temporal-real-run"]
+    if run_id := os.environ.get("GITHUB_RUN_ID"):
+        refs.append(f"github-actions://run/{run_id}")
+    if source_sha := os.environ.get("HOWEDO_SOURCE_SHA"):
+        refs.append(f"git-source://sha/{source_sha}")
+    if checkout_sha := os.environ.get("GITHUB_SHA"):
+        refs.append(f"git-checkout://sha/{checkout_sha}")
+    return tuple(sorted(refs))
+
+
+def test_temporal_reference_bridge_issues_conformance_artifact() -> None:
     async def scenario() -> None:
-        task_queue = "howedo-r8-contract"
+        task_queue = "howedo-r9-conformance-artifact"
         policy = revision("policy://deploy", "1")
         adapter = TemporalRuntimeAdapterV1()
 
@@ -73,7 +89,7 @@ def test_temporal_reference_bridge_passes_runtime_adapter_v1() -> None:
         ):
             handle = await env.client.start_workflow(
                 ContractWorkflow.run,
-                id="howedo-r8-contract",
+                id="howedo-r9-conformance-artifact",
                 task_queue=task_queue,
             )
             fixture = TemporalFixture(
@@ -82,8 +98,18 @@ def test_temporal_reference_bridge_passes_runtime_adapter_v1() -> None:
                 resources=(policy,),
                 current_heads={policy.resource_id: policy},
             )
-            results = await AdapterConformanceSuite().run(adapter, fixture)
-            AdapterConformanceSuite.assert_passed(results)
-            assert next(item for item in results if item.check == "continue-after-recover").passed
+            artifact = await AdapterConformanceArtifactBuilder().build(
+                adapter,
+                fixture,
+                evidence_refs=evidence_refs(),
+            )
+            assert artifact.status is ConformanceStatus.CONFORMANT
+            assert verify_conformance_record(artifact.record()).valid
+            assert artifact.manifest.runtime_family == "temporal"
+
+            output_dir = os.environ.get("HOWEDO_CONFORMANCE_ARTIFACT_DIR")
+            if output_dir:
+                version = artifact.environment.python_version.replace(".", "")
+                artifact.write(Path(output_dir) / f"temporal-py{version}.json")
 
     asyncio.run(scenario())

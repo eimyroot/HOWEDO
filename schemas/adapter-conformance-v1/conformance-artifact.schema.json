@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://howedo.dev/schemas/adapter-conformance-v1/conformance-artifact.schema.json",
+  "title": "HOWEDO Adapter Conformance Artifact v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact_digest",
+    "artifact_version",
+    "checks",
+    "environment",
+    "evidence_refs",
+    "manifest",
+    "manifest_digest",
+    "status"
+  ],
+  "properties": {
+    "artifact_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "artifact_version": {"const": "howedo.adapter-conformance-artifact.v1"},
+    "status": {"enum": ["CONFORMANT", "NON_CONFORMANT"]},
+    "manifest_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["adapter_id", "adapter_version", "capabilities", "contract_version", "runtime_family"],
+      "properties": {
+        "adapter_id": {"type": "string", "minLength": 1},
+        "adapter_version": {"type": "string", "minLength": 1},
+        "runtime_family": {"type": "string", "minLength": 1},
+        "contract_version": {"const": "howedo.runtime-adapter.v1"},
+        "capabilities": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "CAPTURE",
+              "CONTINUE",
+              "EXACT_RUNTIME_IDENTITY",
+              "FENCED_WRITES",
+              "READ_ONLY_VALIDATE",
+              "VALIDATE_RESUME"
+            ]
+          }
+        }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 11,
+      "maxItems": 11,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["check", "detail", "passed"],
+        "properties": {
+          "check": {"type": "string", "minLength": 1},
+          "detail": {"type": "string"},
+          "passed": {"type": "boolean"}
+        }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform", "python_implementation", "python_version"],
+      "properties": {
+        "platform": {"type": "string", "minLength": 1},
+        "python_implementation": {"type": "string", "minLength": 1},
+        "python_version": {"type": "string", "minLength": 1}
+      }
+    },
+    "evidence_refs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    }
+  }
+}

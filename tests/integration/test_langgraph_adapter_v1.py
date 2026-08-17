@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from dataclasses import dataclass
 from hashlib import sha256
+from pathlib import Path
 from typing import Any, TypedDict
 
 import pytest
@@ -13,7 +15,11 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
 
-from howedo.adapter_conformance import AdapterConformanceSuite
+from howedo.adapter_certification import (
+    AdapterConformanceArtifactBuilder,
+    ConformanceStatus,
+    verify_conformance_record,
+)
 from howedo.adapters.langgraph_v1 import LangGraphRuntimeAdapterV1
 from howedo.domain import ResourceRevision
 
@@ -61,9 +67,20 @@ class LangGraphFixture:
         return bool(result["approved"] is True)
 
 
-def test_langgraph_reference_bridge_passes_runtime_adapter_v1() -> None:
+def evidence_refs() -> tuple[str, ...]:
+    refs = ["test://langgraph-real-checkpoint"]
+    if run_id := os.environ.get("GITHUB_RUN_ID"):
+        refs.append(f"github-actions://run/{run_id}")
+    if source_sha := os.environ.get("HOWEDO_SOURCE_SHA"):
+        refs.append(f"git-source://sha/{source_sha}")
+    if checkout_sha := os.environ.get("GITHUB_SHA"):
+        refs.append(f"git-checkout://sha/{checkout_sha}")
+    return tuple(sorted(refs))
+
+
+def test_langgraph_reference_bridge_issues_conformance_artifact() -> None:
     async def scenario() -> None:
-        graph, config = build_interrupted_graph("r8-contract")
+        graph, config = build_interrupted_graph("r9-conformance-artifact")
         policy = revision("policy://deploy", "1")
         fixture = LangGraphFixture(
             runtime=graph,
@@ -72,11 +89,18 @@ def test_langgraph_reference_bridge_passes_runtime_adapter_v1() -> None:
             current_heads={policy.resource_id: policy},
             continuation=Command(resume=True),
         )
-        results = await AdapterConformanceSuite().run(
+        artifact = await AdapterConformanceArtifactBuilder().build(
             LangGraphRuntimeAdapterV1(),
             fixture,
+            evidence_refs=evidence_refs(),
         )
-        AdapterConformanceSuite.assert_passed(results)
-        assert next(item for item in results if item.check == "continue-after-recover").passed
+        assert artifact.status is ConformanceStatus.CONFORMANT
+        assert verify_conformance_record(artifact.record()).valid
+        assert artifact.manifest.runtime_family == "langgraph"
+
+        output_dir = os.environ.get("HOWEDO_CONFORMANCE_ARTIFACT_DIR")
+        if output_dir:
+            version = artifact.environment.python_version.replace(".", "")
+            artifact.write(Path(output_dir) / f"langgraph-py{version}.json")
 
     asyncio.run(scenario())

@@ -11,6 +11,9 @@ requires-python = ">=3.12"
 authors = [{ name = "Eimy Herrer" }]
 dependencies = []
 
+[project.scripts]
+howedo-verify-conformance = "howedo.certification_cli:main"
+
 [project.optional-dependencies]
 postgres = ["psycopg[binary]>=3.2,<4"]
 langgraph = ["langgraph>=1.2,<2"]
