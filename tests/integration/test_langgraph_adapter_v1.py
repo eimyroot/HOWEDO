@@ -13,7 +13,11 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
 
-from howedo.adapter_conformance import AdapterConformanceSuite
+from howedo.adapter_certification import (
+    AdapterConformanceArtifactBuilder,
+    ConformanceStatus,
+    verify_conformance_record,
+)
 from howedo.adapters.langgraph_v1 import LangGraphRuntimeAdapterV1
 from howedo.domain import ResourceRevision
 
@@ -61,9 +65,9 @@ class LangGraphFixture:
         return bool(result["approved"] is True)
 
 
-def test_langgraph_reference_bridge_passes_runtime_adapter_v1() -> None:
+def test_langgraph_reference_bridge_issues_conformance_artifact() -> None:
     async def scenario() -> None:
-        graph, config = build_interrupted_graph("r8-contract")
+        graph, config = build_interrupted_graph("r9-conformance-artifact")
         policy = revision("policy://deploy", "1")
         fixture = LangGraphFixture(
             runtime=graph,
@@ -72,11 +76,13 @@ def test_langgraph_reference_bridge_passes_runtime_adapter_v1() -> None:
             current_heads={policy.resource_id: policy},
             continuation=Command(resume=True),
         )
-        results = await AdapterConformanceSuite().run(
+        artifact = await AdapterConformanceArtifactBuilder().build(
             LangGraphRuntimeAdapterV1(),
             fixture,
+            evidence_refs=("test://langgraph-real-checkpoint",),
         )
-        AdapterConformanceSuite.assert_passed(results)
-        assert next(item for item in results if item.check == "continue-after-recover").passed
+        assert artifact.status is ConformanceStatus.CONFORMANT
+        assert verify_conformance_record(artifact.record()).valid
+        assert artifact.manifest.runtime_family == "langgraph"
 
     asyncio.run(scenario())
