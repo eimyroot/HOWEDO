@@ -37,6 +37,7 @@ from howedo.semlock import CompatibilityRule, ExactSemanticComparator, RuleBased
 from howedo.storage import StorageAdapter
 
 __all__ = [
+    "PROTOCOL_VERSION",
     "CompatibilityRule",
     "ConcurDecision",
     "ConcurEngine",
@@ -53,7 +54,6 @@ __all__ = [
     "FenceRegistry",
     "FenceToken",
     "HeadConflict",
-    "PROTOCOL_VERSION",
     "RecallEngine",
     "RecallImpact",
     "RecallResult",
