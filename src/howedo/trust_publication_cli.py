@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from howedo.trust_publication import (
@@ -17,9 +17,9 @@ def _parse_time(value: str) -> datetime:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError as exc:
         raise argparse.ArgumentTypeError("expected ISO-8601 timestamp") from exc
-    if parsed.tzinfo is None or parsed.utcoffset() != timezone.utc.utcoffset(parsed):
+    if parsed.tzinfo is None or parsed.utcoffset() != UTC.utcoffset(parsed):
         raise argparse.ArgumentTypeError("timestamp must be timezone-aware UTC")
-    return parsed.astimezone(timezone.utc).replace(microsecond=0)
+    return parsed.astimezone(UTC).replace(microsecond=0)
 
 
 def build_main() -> int:
@@ -40,7 +40,7 @@ def build_main() -> int:
     if not isinstance(policy_record, dict):
         raise SystemExit("policy must contain a JSON object")
     policy = load_publication_policy(policy_record)
-    verified_at = args.verified_at or datetime.now(timezone.utc).replace(microsecond=0)
+    verified_at = args.verified_at or datetime.now(UTC).replace(microsecond=0)
     manifest = build_trust_root_publication_manifest(
         root_history=root_history,
         policy=policy,
