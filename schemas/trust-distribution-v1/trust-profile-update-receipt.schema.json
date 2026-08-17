@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/nulleimy/HOWEDO/schemas/trust-distribution-v1/trust-profile-update-receipt.schema.json",
+  "title": "HOWEDO Trust Profile Update Receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "bootstrap_root_digest",
+    "profile_digest",
+    "profile_id",
+    "receipt_digest",
+    "receipt_version",
+    "target_hashes",
+    "target_length",
+    "target_path",
+    "trusted_root_version"
+  ],
+  "properties": {
+    "bootstrap_root_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "profile_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "profile_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "receipt_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "receipt_version": {
+      "const": "howedo.trust-distribution-receipt.v1"
+    },
+    "target_hashes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["algorithm", "digest"],
+        "properties": {
+          "algorithm": {"type": "string", "minLength": 1},
+          "digest": {"type": "string", "pattern": "^[0-9a-f]+$"}
+        }
+      }
+    },
+    "target_length": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "target_path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "trusted_root_version": {
+      "type": "integer",
+      "minimum": 1
+    }
+  }
+}

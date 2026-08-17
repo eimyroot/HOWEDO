@@ -30,7 +30,7 @@ Every continuity check resolves to one of:
 - **Decision Engine** — deterministic continuity decisions.
 - **Continuity Witness** — reproducible evidence of each decision.
 
-## R0-R12 baseline
+## R0-R13 baseline
 
 The current development baseline contains:
 
@@ -58,7 +58,9 @@ The current development baseline contains:
 - standard in-toto Simple Verification Result v0.2 trust receipts;
 - content-addressed `howedo.consumer-trust-profile.v1` relying-party expectations;
 - portable `howedo.certification-package.v1` evidence packages;
-- independent consumer replay of the R9 → R11 chain, including cryptographically verified GitHub workflow-name claims and pinned consumer-profile digests.
+- independent consumer replay of the R9 → R11 chain, including cryptographically verified GitHub workflow-name claims and pinned consumer-profile digests;
+- optional TUF trust-root distribution and rotation for consumer trust profiles;
+- content-addressed `howedo.trust-distribution-receipt.v1` update evidence.
 
 ## Installation profiles
 
@@ -68,15 +70,16 @@ The core package has no required runtime or cryptography dependencies:
 pip install howedo-continuity
 ```
 
-The adapter contract, conformance kit, artifact verifier, attestation statement builder/verifier, trust policy engine, consumer certification verifier, and SDK helpers are part of core and do not require a runtime vendor SDK or signing library.
+The adapter contract, conformance kit, artifact verifier, attestation statement builder/verifier, trust policy engine, consumer certification verifier, trust-distribution contract, and SDK helpers are part of core and do not require a runtime vendor SDK or signing library merely to import HOWEDO.
 
-Optional reference adapters are isolated extras:
+Optional integrations are isolated extras:
 
 ```bash
 pip install 'howedo-continuity[postgres]'
 pip install 'howedo-continuity[langgraph]'
 pip install 'howedo-continuity[temporal]'
-pip install 'howedo-continuity[postgres,langgraph,temporal]'
+pip install 'howedo-continuity[tuf]'
+pip install 'howedo-continuity[postgres,langgraph,temporal,tuf]'
 ```
 
 ## Runtime adapter contract
@@ -101,151 +104,150 @@ See `docs/runtime-adapter-v1.md`, `docs/third-party-adapters.md`, and `examples/
 
 ## Conformance artifacts
 
-R9 turns a conformance run into a portable JSON record:
-
-```text
-runtime fixture
-      ↓
-RuntimeAdapterV1 conformance
-      ↓
-11 frozen checks
-      ↓
-ConformanceArtifact
-      ├── exact adapter manifest
-      ├── manifest digest
-      ├── environment
-      ├── evidence refs
-      ├── derived status
-      └── artifact digest
-```
-
-A saved artifact can be verified without installing LangGraph, Temporal, PostgreSQL, or another runtime SDK:
+R9 turns a conformance run into a portable content-addressed JSON record. A saved artifact can be verified without installing LangGraph, Temporal, PostgreSQL, or another runtime SDK:
 
 ```bash
 howedo-verify-conformance artifact.json
 ```
 
-The R9 artifact is content-addressed. Its digest detects record changes and binds the included evidence.
-
 See `docs/adapter-conformance-artifact-v1.md` and `docs/adr/ADR-0010-adapter-conformance-artifact-v1.md`.
 
 ## Signed conformance attestations
 
-R10 authenticates a conformance claim without changing the R9 artifact:
+R10 binds an exact R9 artifact to an in-toto Statement v1 and uses Sigstore/Cosign with GitHub Actions OIDC as the reference keyless signing path:
 
 ```text
 R9 artifact
     ↓
 in-toto Statement/v1
     ↓
-exact subject SHA-256 binding
-    ↓
 HOWEDO semantic verification
     ↓
 Sigstore keyless signature bundle
     ↓
-expected GitHub workflow identity verification
+expected workflow identity verification
 ```
 
-Build and semantically verify a statement with core-only commands:
+Core-only commands build and verify the semantic binding:
 
 ```bash
 howedo-build-attestation artifact.json artifact.intoto.json
 howedo-verify-attestation artifact.json artifact.intoto.json
 ```
 
-The reference CI path then signs the statement with Sigstore/Cosign using GitHub Actions OIDC. No long-lived signing key is stored by HOWEDO.
-
-A complete R10 acceptance requires all three checks:
-
-```text
-R9 artifact integrity
-AND R10 statement semantic binding
-AND Sigstore signer / transparency verification
-```
-
-R10 does not grant execution authority and does not implement a custom PKI, custom transparency log, or custom cryptographic signature format.
-
 See `docs/signed-conformance-attestation-v1.md` and `docs/adr/ADR-0011-signed-conformance-attestation.md`.
 
 ## Attestation trust policy
 
-R11 adds consumer-side policy evaluation after R10 authentication:
+R11 evaluates authenticated R10 evidence against a deterministic consumer policy and emits a standard in-toto Simple Verification Result v0.2:
 
 ```text
-R9 artifact integrity
-        AND
-R10 statement binding
-        AND
-external crypto verification
-        AND
-HOWEDO trust policy
+R9 integrity
+AND R10 semantic binding
+AND external crypto verification
+AND HOWEDO trust policy
         ↓
 ACCEPT / REJECT
         ↓
 in-toto SVR v0.2
 ```
 
-`howedo.attestation-trust-policy.v1` is content-addressed and evaluates verifier identity, issuer, signer identity, repository, workflow, execution ref, trigger, predicate type, artifact version, conformance status, transparency verification, and exact workflow-SHA-to-R9-checkout binding.
-
-The reference end-to-end verifier is:
+The reference verifier is:
 
 ```bash
 howedo-verify-sigstore-trust ...
 ```
 
-It invokes Cosign as external tooling; HOWEDO core remains cryptography-library independent.
-
-R11 uses the standard in-toto Simple Verification Result v0.2 predicate instead of inventing a proprietary verification receipt. The reference CI path also signs the resulting SVR records keylessly.
-
-The production reference policy accepts only the canonical workflow on `refs/heads/main`. Pull requests use a separate test-only policy. The production policy digest must be pinned through an independent trusted channel when used as a security root.
+The production reference policy accepts only the canonical workflow on `refs/heads/main`; pull requests use a separate test-only policy.
 
 See `docs/attestation-trust-policy-v1.md` and `docs/adr/ADR-0012-attestation-trust-policy.md`.
 
 ## Consumer certification replay
 
-R12 lets a relying consumer verify the certification chain independently instead of trusting a producer-generated `ACCEPT` as an oracle:
+R12 lets a relying consumer replay the certification chain independently instead of trusting a producer-generated `ACCEPT` as an oracle:
 
 ```text
 portable certification package
         ↓
-consumer-pinned trust profile
+consumer trust profile
         ↓
 file-digest verification
         ↓
-R9 integrity + R10 semantic replay
+R9 + R10 replay
         ↓
-R10 Sigstore verification
+Sigstore verification
         ↓
-exact trusted R11 policy identity/digest
+pinned R11 policy identity/digest
         ↓
-local R11 policy + deterministic SVR replay
+local R11 policy + SVR replay
         ↓
-R11 SVR Sigstore verification
+R11 SVR signature verification
         ↓
 ACCEPT / REJECT
 ```
 
-`howedo.consumer-trust-profile.v1` pins relying-party expectations independently of the package. `howedo.certification-package.v1` is transport/index material over the authenticated R9/R10/R11 evidence; it is not a new PKI or a producer-controlled trust root.
-
-The reference consumer verifier also pins the GitHub workflow display name as a cryptographically verified certificate claim and requires the expected consumer-profile digest to be supplied independently of the profile file.
+`howedo.consumer-trust-profile.v1` pins relying-party expectations independently of the package. `howedo.certification-package.v1` is transport/index material over authenticated R9/R10/R11 evidence; it is not a new PKI or a producer-controlled trust root.
 
 See `docs/consumer-certification-v1.md` and `docs/adr/ADR-0013-consumer-certification-replay.md`.
 
+## Trust-root distribution and rotation
+
+R13 removes the need to replace a pinned R12 consumer-profile digest manually forever while preserving an independently bootstrapped trust anchor.
+
+```text
+out-of-band trusted TUF root
+        ↓
+TUF metadata refresh
+        ├── sequential root rotation
+        ├── freshness / expiry checks
+        ├── rollback protection
+        └── target length + hash verification
+        ↓
+verified howedo.consumer-trust-profile.v1 target
+        ↓
+HOWEDO profile validation
+        ↓
+howedo.trust-distribution-receipt.v1
+```
+
+The TUF repository URL is not the trust root. The initial TUF root bytes must arrive through an independently trusted bootstrap channel. HOWEDO records their SHA-256 digest, the final trusted TUF root version, exact target hashes, and resulting consumer-profile digest in the update receipt.
+
+Reference CLI:
+
+```bash
+howedo-fetch-consumer-trust-profile \
+  --bootstrap-root root.json \
+  --metadata-dir .howedo/tuf/metadata \
+  --metadata-base-url https://example.invalid/metadata/ \
+  --target-dir .howedo/tuf/targets \
+  --target-base-url https://example.invalid/targets/ \
+  --profile-output consumer-profile.json \
+  --receipt-output trust-update-receipt.json
+```
+
+HOWEDO does not implement a TUF-like metadata format, repository server, PKI, or key ceremony. TUF remains an optional distribution/rotation substrate.
+
+See `docs/adr/ADR-0014-tuf-trust-root-distribution.md`.
+
 ## Canonical change channel
 
-Changes to canonical `main` are intended to flow through pull requests and the repository trust gates. `Canonical Channel` detects a `main` push that is not associated with a merged pull request and rejects force-push provenance in CI. This check becomes preventive only when GitHub branch protection or a repository ruleset requires it.
+Canonical `main` is protected by the active repository ruleset **`HOWEDO canonical main protection`** (ruleset id `20928865`). The ruleset has no bypass actors and requires the exact GitHub Actions checks used by the project before merge.
 
-See `docs/governance/CANONICAL_CHANNEL_PROTECTION.md` and issue #15.
+The protected channel requires a pull request, resolved review threads, strict required checks, merge commits, and blocks deletion plus non-fast-forward / force-push updates. `Canonical Channel / provenance` additionally verifies that a resulting `main` head is attributable to a merged PR targeting `main`.
+
+Repository governance is therefore preventive as well as evidence-producing; it is separate from HOWEDO runtime semantics.
+
+See `docs/governance/CANONICAL_CHANNEL_PROTECTION.md`.
 
 ## Integrations
 
-**Implemented reference adapters:**
+**Implemented reference integrations:**
 
 - PostgreSQL — persistence/reference storage adapter.
 - LangGraph OSS — exact checkpoint binding and HOWEDO-gated resume through the public LangGraph API.
 - Temporal OSS — exact workflow-run binding and HOWEDO-gated signal delivery through the public Temporal Python SDK.
-- Sigstore/Cosign — external cryptographic verification adapter for the R11/R12 reference trust flow.
+- Sigstore/Cosign — external cryptographic verification for the R10–R12 reference trust flow.
+- The Update Framework (TUF) — optional consumer trust-profile bootstrap, distribution, integrity, freshness, and root-rotation substrate.
 
 The Temporal adapter deliberately binds `namespace + workflow_id + run_id`. A continuation request is never redirected to an unrelated or successor run merely because it shares the same workflow ID. The bound run must still be `RUNNING`, and HOWEDO recovery validity must resolve to `RECOVER`, before the adapter sends the signal.
 
