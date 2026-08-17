@@ -19,6 +19,12 @@ from howedo.recall import (
     RecallResult,
     RecallSignal,
 )
+from howedo.recovery import (
+    RecoveryCheckpoint,
+    RecoveryDecision,
+    RecoveryEngine,
+    RecoveryWitness,
+)
 from howedo.semlock import CompatibilityRule, ExactSemanticComparator, RuleBasedSemanticComparator
 
 __all__ = [
@@ -41,6 +47,10 @@ __all__ = [
     "RecallImpact",
     "RecallResult",
     "RecallSignal",
+    "RecoveryCheckpoint",
+    "RecoveryDecision",
+    "RecoveryEngine",
+    "RecoveryWitness",
     "ResourceRevision",
     "RuleBasedSemanticComparator",
     "StateRegistry",
