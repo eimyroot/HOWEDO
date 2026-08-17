@@ -30,7 +30,7 @@ Every continuity check resolves to one of:
 - **Decision Engine** — deterministic continuity decisions.
 - **Continuity Witness** — reproducible evidence of each decision.
 
-## R0-R8 baseline
+## R0-R9 baseline
 
 The current development baseline contains:
 
@@ -45,7 +45,10 @@ The current development baseline contains:
 - optional Temporal OSS Python runtime adapter;
 - vendor-neutral `howedo.runtime-adapter.v1` contract;
 - executable runtime-adapter conformance kit;
-- third-party adapter SDK surface and reference bridges.
+- third-party adapter SDK surface and reference bridges;
+- content-addressed `howedo.adapter-conformance-artifact.v1` records;
+- core-only conformance artifact verifier and CLI;
+- CI-produced evidence artifacts for LangGraph and Temporal reference adapters.
 
 ## Installation profiles
 
@@ -55,7 +58,7 @@ The core package has no required runtime dependencies:
 pip install howedo-continuity
 ```
 
-The adapter contract, conformance kit, and SDK helpers are part of core and do not require a runtime vendor SDK.
+The adapter contract, conformance kit, artifact verifier, and SDK helpers are part of core and do not require a runtime vendor SDK.
 
 Optional reference adapters are isolated extras:
 
@@ -82,9 +85,41 @@ RECOVER only
 continue exact bound execution
 ```
 
-A conforming adapter declares a content-addressed capability manifest and exposes exact identity, capture, validation, and continuation operations. The shared conformance kit verifies the vendor-neutral invariants; runtime-specific tests remain responsible for proving exact targeting and lifecycle behavior.
+A conforming adapter declares a content-addressed capability manifest and exposes exact identity, capture, validation, and continuation operations. The shared conformance kit verifies the vendor-neutral invariants; runtime-specific fixtures prove exact targeting and real continuation behavior.
 
 See `docs/runtime-adapter-v1.md`, `docs/third-party-adapters.md`, and `examples/third_party_runtime_adapter.py`.
+
+## Conformance artifacts
+
+R9 turns a conformance run into a portable JSON record:
+
+```text
+runtime fixture
+      ↓
+RuntimeAdapterV1 conformance
+      ↓
+11 frozen checks
+      ↓
+ConformanceArtifact
+      ├── exact adapter manifest
+      ├── manifest digest
+      ├── environment
+      ├── evidence refs
+      ├── derived status
+      └── artifact digest
+```
+
+A saved artifact can be verified without installing LangGraph, Temporal, PostgreSQL, or another runtime SDK:
+
+```bash
+howedo-verify-conformance artifact.json
+```
+
+The artifact is **content-addressed, not issuer-signed**. Its digest detects record changes and binds the included evidence, but it does not authenticate who created the record. Signed attestations, trust roots, revocation, and transparency are intentionally outside R9.
+
+The conformance suite includes a real continuation check, so artifact generation must use isolated/disposable runtime fixtures rather than arbitrary production executions.
+
+See `docs/adapter-conformance-artifact-v1.md` and `docs/adr/ADR-0010-adapter-conformance-artifact-v1.md`.
 
 ## Integrations
 
