@@ -28,11 +28,24 @@ from howedo.adapter_contract import (
     RuntimeIdentity,
     require_recover,
 )
+from howedo.attestation import (
+    CONFORMANCE_PREDICATE_V1,
+    CONFORMANCE_SUBJECT_NAME,
+    IN_TOTO_STATEMENT_V1,
+    AttestationVerification,
+    AttestationVerificationCode,
+    build_conformance_statement,
+    verify_conformance_statement,
+    write_conformance_statement,
+)
 
 __all__ = [
     "ADAPTER_CONTRACT_VERSION",
     "CONFORMANCE_ARTIFACT_VERSION",
     "CONFORMANCE_CHECKS_V1",
+    "CONFORMANCE_PREDICATE_V1",
+    "CONFORMANCE_SUBJECT_NAME",
+    "IN_TOTO_STATEMENT_V1",
     "AdapterBinding",
     "AdapterCapability",
     "AdapterConformanceArtifactBuilder",
@@ -44,12 +57,17 @@ __all__ = [
     "AdapterResumeBlocked",
     "ArtifactVerification",
     "ArtifactVerificationCode",
+    "AttestationVerification",
+    "AttestationVerificationCode",
     "ConformanceArtifact",
     "ConformanceEnvironment",
     "ConformanceResult",
     "ConformanceStatus",
     "RuntimeAdapterV1",
     "RuntimeIdentity",
+    "build_conformance_statement",
     "require_recover",
     "verify_conformance_record",
+    "verify_conformance_statement",
+    "write_conformance_statement",
 ]
