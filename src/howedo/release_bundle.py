@@ -93,7 +93,7 @@ class ReleaseBundleManifest:
         return record
 
     @classmethod
-    def from_record(cls, record: Mapping[str, Any]) -> "ReleaseBundleManifest":
+    def from_record(cls, record: Mapping[str, Any]) -> ReleaseBundleManifest:
         expected = {
             "bundle_digest",
             "bundle_version",
