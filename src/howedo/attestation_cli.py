@@ -12,7 +12,7 @@ from howedo.attestation import verify_conformance_statement, write_conformance_s
 def _load_object(path: str) -> Mapping[str, Any]:
     value = json.loads(Path(path).read_text())
     if not isinstance(value, Mapping):
-        raise ValueError(f"expected JSON object: {path}")
+        raise TypeError(f"expected JSON object: {path}")
     return value
 
 
@@ -27,7 +27,7 @@ def build_main() -> int:
     try:
         record = _load_object(args.artifact)
         target = write_conformance_statement(record, args.output)
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
+    except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
         print(f"HOWEDO_ATTESTATION_BUILD=FAIL:{exc}")
         return 1
 
@@ -47,7 +47,7 @@ def verify_main() -> int:
         record = _load_object(args.artifact)
         statement = _load_object(args.statement)
         verification = verify_conformance_statement(record, statement)
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
+    except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
         print(f"HOWEDO_ATTESTATION_BINDING=FAIL:{exc}")
         return 1
 
