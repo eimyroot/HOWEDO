@@ -16,6 +16,23 @@ from howedo.kernel import DecisionEngine
 from howedo.semlock import SemanticComparator
 
 
+def _digest(payload: object) -> str:
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    return f"sha256:{sha256(encoded).hexdigest()}"
+
+
+def _checkpoint_digest(snapshot_id: str, fences: tuple[FenceToken, ...]) -> str:
+    return _digest(
+        {
+            "fences": [
+                {"resource_id": fence.resource_id, "value": fence.value}
+                for fence in fences
+            ],
+            "snapshot_id": snapshot_id,
+        }
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class RecoveryCheckpoint:
     """Content-addressed HOWEDO continuity manifest for an external runtime checkpoint."""
@@ -25,6 +42,10 @@ class RecoveryCheckpoint:
     fences: tuple[FenceToken, ...] = ()
 
     def __post_init__(self) -> None:
+        ordered_fences = tuple(sorted(self.fences, key=lambda item: item.resource_id))
+        if self.fences != ordered_fences:
+            raise ValueError("recovery fences must use canonical resource order")
+
         snapshot_resources = self.snapshot.by_resource()
         seen: set[str] = set()
         for fence in self.fences:
@@ -36,6 +57,10 @@ class RecoveryCheckpoint:
                 )
             seen.add(fence.resource_id)
 
+        expected_id = _checkpoint_digest(self.snapshot.snapshot_id, self.fences)
+        if self.checkpoint_id != expected_id:
+            raise ValueError("recovery checkpoint id does not match manifest content")
+
     @classmethod
     def build(
         cls,
@@ -44,16 +69,8 @@ class RecoveryCheckpoint:
         fences: tuple[FenceToken, ...] = (),
     ) -> RecoveryCheckpoint:
         ordered_fences = tuple(sorted(fences, key=lambda item: item.resource_id))
-        payload = {
-            "fences": [
-                {"resource_id": fence.resource_id, "value": fence.value}
-                for fence in ordered_fences
-            ],
-            "snapshot_id": snapshot.snapshot_id,
-        }
-        encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
         return cls(
-            checkpoint_id=f"sha256:{sha256(encoded).hexdigest()}",
+            checkpoint_id=_checkpoint_digest(snapshot.snapshot_id, ordered_fences),
             snapshot=snapshot,
             fences=ordered_fences,
         )
@@ -67,6 +84,22 @@ class RecoveryWitness:
     reason_codes: tuple[str, ...]
     witness_digest: str
 
+    def __post_init__(self) -> None:
+        ordered_reasons = tuple(sorted(set(self.reason_codes)))
+        if self.reason_codes != ordered_reasons:
+            raise ValueError("recovery witness reasons must be sorted and unique")
+
+        expected_digest = _digest(
+            {
+                "action": self.action.value,
+                "checkpoint_id": self.checkpoint_id,
+                "reason_codes": self.reason_codes,
+                "snapshot_id": self.snapshot_id,
+            }
+        )
+        if self.witness_digest != expected_digest:
+            raise ValueError("recovery witness digest does not match witness content")
+
     @classmethod
     def build(
         cls,
@@ -76,20 +109,19 @@ class RecoveryWitness:
         action: ContinuityAction,
         reason_codes: tuple[str, ...],
     ) -> RecoveryWitness:
-        ordered_reasons = tuple(sorted(reason_codes))
+        ordered_reasons = tuple(sorted(set(reason_codes)))
         payload = {
             "action": action.value,
             "checkpoint_id": checkpoint_id,
             "reason_codes": ordered_reasons,
             "snapshot_id": snapshot_id,
         }
-        encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
         return cls(
             checkpoint_id=checkpoint_id,
             snapshot_id=snapshot_id,
             action=action,
             reason_codes=ordered_reasons,
-            witness_digest=f"sha256:{sha256(encoded).hexdigest()}",
+            witness_digest=_digest(payload),
         )
 
 
