@@ -8,16 +8,16 @@ from howedo.domain import ResourceRevision, Validity
 from howedo.recovery import RecoveryDecision
 from howedo.semlock import SemanticComparator
 
-RuntimeT = TypeVar("RuntimeT", contravariant=True)
+RuntimeT_contra = TypeVar("RuntimeT_contra", contravariant=True)
 BindingT = TypeVar("BindingT")
 
 
-class RuntimeAdapter(Protocol[RuntimeT, BindingT]):
+class RuntimeAdapter(Protocol[RuntimeT_contra, BindingT]):
     """Vendor-neutral checkpoint-to-continuity adapter contract."""
 
     def capture(
         self,
-        runtime: RuntimeT,
+        runtime: RuntimeT_contra,
         config: Mapping[str, Any],
         *,
         resources: Sequence[ResourceRevision],
@@ -26,7 +26,7 @@ class RuntimeAdapter(Protocol[RuntimeT, BindingT]):
 
     def validate_resume(
         self,
-        runtime: RuntimeT,
+        runtime: RuntimeT_contra,
         binding: BindingT,
         *,
         current_heads: Mapping[str, ResourceRevision],
