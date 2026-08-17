@@ -23,7 +23,7 @@ temporal = ["temporalio>=1.31,<2"]
 dev = ["pytest>=8", "ruff>=0.9"]
 
 [tool.setuptools]
-package-dir = "src"
+package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
