@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:howedo:protocol:v1:continuity-event",
+  "title": "HOWEDO ContinuityEvent v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["event_id", "event_type", "protocol_version", "payload"],
+  "properties": {
+    "event_id": {"type": "string", "minLength": 1},
+    "event_type": {"type": "string", "minLength": 1},
+    "resource_id": {"type": ["string", "null"]},
+    "protocol_version": {"const": "howedo.protocol.v1"},
+    "payload": {"type": "object"}
+  }
+}

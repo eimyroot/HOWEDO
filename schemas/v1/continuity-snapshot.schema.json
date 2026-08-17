@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:howedo:protocol:v1:continuity-snapshot",
+  "title": "HOWEDO ContinuitySnapshot v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["snapshot_id", "resources"],
+  "properties": {
+    "snapshot_id": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "resources": {
+      "type": "array",
+      "items": {"$ref": "urn:howedo:protocol:v1:resource-revision"}
+    }
+  }
+}

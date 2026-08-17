@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:howedo:protocol:v1:recovery-checkpoint",
+  "title": "HOWEDO RecoveryCheckpoint v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["checkpoint_id", "snapshot", "fences"],
+  "properties": {
+    "checkpoint_id": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "snapshot": {"$ref": "urn:howedo:protocol:v1:continuity-snapshot"},
+    "fences": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["resource_id", "value"],
+        "properties": {
+          "resource_id": {"type": "string", "minLength": 1},
+          "value": {"type": "integer", "minimum": 1}
+        }
+      }
+    }
+  }
+}

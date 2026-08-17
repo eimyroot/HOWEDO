@@ -11,6 +11,14 @@ from howedo.domain import (
     Validity,
 )
 from howedo.kernel import DecisionEngine, HeadConflict, StateRegistry
+from howedo.protocol import (
+    PROTOCOL_VERSION,
+    ContinuityEvent,
+    StoredEvent,
+    WitnessRecord,
+    canonical_digest,
+    canonical_json,
+)
 from howedo.recall import (
     DependencyEdge,
     DependencyGraph,
@@ -26,6 +34,7 @@ from howedo.recovery import (
     RecoveryWitness,
 )
 from howedo.semlock import CompatibilityRule, ExactSemanticComparator, RuleBasedSemanticComparator
+from howedo.storage import StorageAdapter
 
 __all__ = [
     "CompatibilityRule",
@@ -33,6 +42,7 @@ __all__ = [
     "ConcurEngine",
     "ContinuityAction",
     "ContinuityDecision",
+    "ContinuityEvent",
     "ContinuitySnapshot",
     "ContinuityWitness",
     "DecisionEngine",
@@ -43,6 +53,7 @@ __all__ = [
     "FenceRegistry",
     "FenceToken",
     "HeadConflict",
+    "PROTOCOL_VERSION",
     "RecallEngine",
     "RecallImpact",
     "RecallResult",
@@ -54,6 +65,11 @@ __all__ = [
     "ResourceRevision",
     "RuleBasedSemanticComparator",
     "StateRegistry",
+    "StorageAdapter",
+    "StoredEvent",
     "Validity",
+    "WitnessRecord",
     "WriteIntent",
+    "canonical_digest",
+    "canonical_json",
 ]
