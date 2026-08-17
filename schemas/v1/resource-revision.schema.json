@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:howedo:protocol:v1:resource-revision",
+  "title": "HOWEDO ResourceRevision v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["resource_id", "revision", "digest"],
+  "properties": {
+    "resource_id": {"type": "string", "minLength": 1},
+    "revision": {"type": "string", "minLength": 1},
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

@@ -1,0 +1,120 @@
+name: Consolidation R0-R6
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  core-install:
+    name: core import (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Verify zero required runtime dependencies
+        run: |
+          python - <<'PY'
+          import tomllib
+          from pathlib import Path
+          data = tomllib.loads(Path("pyproject.toml").read_text())
+          deps = data["project"].get("dependencies", [])
+          assert deps == [], f"core runtime dependencies must remain empty, got: {deps}"
+          PY
+      - name: Install core only
+        run: python -m pip install .
+      - name: Import core without optional adapters
+        run: |
+          python - <<'PY'
+          import howedo
+          import howedo.domain
+          import howedo.recovery
+          import howedo.runtime
+          print("HOWEDO_CORE_IMPORT=PASS")
+          PY
+
+  profile-conformance:
+    name: ${{ matrix.profile }} (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+        profile: ["dev", "postgres", "langgraph", "all"]
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: howedo
+          POSTGRES_PASSWORD: howedo
+          POSTGRES_DB: howedo
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U howedo -d howedo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      HOWEDO_TEST_POSTGRES_DSN: postgresql://howedo:howedo@localhost:5432/howedo
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install profile
+        shell: bash
+        run: |
+          case "${{ matrix.profile }}" in
+            dev)       python -m pip install -e '.[dev]' ;;
+            postgres)  python -m pip install -e '.[dev,postgres]' ;;
+            langgraph) python -m pip install -e '.[dev,langgraph]' ;;
+            all)       python -m pip install -e '.[dev,postgres,langgraph]' ;;
+          esac
+      - name: Verify optional import boundary
+        shell: bash
+        run: |
+          case "${{ matrix.profile }}" in
+            postgres)
+              python -c 'from howedo.storage.postgres import PostgresStorageAdapter; print("POSTGRES_ADAPTER_IMPORT=PASS")'
+              ;;
+            langgraph)
+              python -c 'from howedo.adapters.langgraph import LangGraphRuntimeAdapter; print("LANGGRAPH_ADAPTER_IMPORT=PASS")'
+              ;;
+            all)
+              python -c 'from howedo.storage.postgres import PostgresStorageAdapter; from howedo.adapters.langgraph import LangGraphRuntimeAdapter; print("ALL_ADAPTER_IMPORTS=PASS")'
+              ;;
+            dev)
+              python -c 'import howedo; print("DEV_CORE_IMPORT=PASS")'
+              ;;
+          esac
+      - name: Ruff
+        run: ruff check .
+      - name: Full test suite
+        run: pytest
+      - name: Freeze protocol-v1 schema filenames
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          expected = {
+              "continuity-event.schema.json",
+              "continuity-snapshot.schema.json",
+              "recovery-checkpoint.schema.json",
+              "resource-revision.schema.json",
+              "witness-record.schema.json",
+          }
+          actual = {p.name for p in Path("schemas/v1").glob("*.json")}
+          assert actual == expected, f"protocol-v1 schema drift: {sorted(actual)}"
+          print("PROTOCOL_V1_SCHEMA_SET=PASS")
+          PY

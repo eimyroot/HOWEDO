@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:howedo:protocol:v1:witness-record",
+  "title": "HOWEDO WitnessRecord v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["witness_digest", "witness_kind", "protocol_version", "payload"],
+  "properties": {
+    "witness_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "witness_kind": {"type": "string", "minLength": 1},
+    "protocol_version": {"const": "howedo.protocol.v1"},
+    "payload": {"type": "object"}
+  }
+}

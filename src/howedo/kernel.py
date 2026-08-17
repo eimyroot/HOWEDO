@@ -8,9 +8,11 @@ from howedo.domain import (
     ContinuityDecision,
     ContinuitySnapshot,
     ContinuityWitness,
+    DriftClassification,
     ResourceRevision,
     Validity,
 )
+from howedo.semlock import ExactSemanticComparator, SemanticComparator
 
 
 class RevisionConflict(ValueError):
@@ -19,6 +21,10 @@ class RevisionConflict(ValueError):
 
 class UnknownResource(KeyError):
     """Raised when a requested resource has no authoritative head."""
+
+
+class HeadConflict(ValueError):
+    """Raised when head activation is attempted against a stale expected head."""
 
 
 @dataclass(slots=True)
@@ -37,6 +43,24 @@ class StateRegistry:
         if make_head:
             self._heads[revision.resource_id] = revision
 
+    def activate_if_head(
+        self,
+        *,
+        expected: ResourceRevision,
+        replacement: ResourceRevision,
+    ) -> None:
+        """Reference compare-and-set semantics for head activation.
+
+        Persistent adapters must provide the same check-and-set atomically in
+        their own transaction boundary.
+        """
+        if expected.resource_id != replacement.resource_id:
+            raise ValueError("replacement must target the same resource")
+        current = self.head(expected.resource_id)
+        if current != expected:
+            raise HeadConflict(f"stale expected head for {expected.resource_id}")
+        self.register(replacement, make_head=True)
+
     def head(self, resource_id: str) -> ResourceRevision:
         try:
             return self._heads[resource_id]
@@ -52,12 +76,7 @@ class StateRegistry:
 
 
 class DecisionEngine:
-    """R0 deterministic continuity decision engine.
-
-    R0 intentionally uses exact revision comparison. Semantic compatibility,
-    propagated dependency invalidation, and fencing extend this contract in
-    later bundles without changing the public decision values.
-    """
+    """Deterministic continuity decision engine."""
 
     def check(
         self,
@@ -66,8 +85,10 @@ class DecisionEngine:
         current_heads: Mapping[str, ResourceRevision],
         validity: Mapping[str, Validity] | None = None,
         recovery_requested: bool = False,
+        semantic_comparator: SemanticComparator | None = None,
     ) -> ContinuityDecision:
         validity = validity or {}
+        comparator = semantic_comparator or ExactSemanticComparator()
         reasons: list[str] = []
         action = ContinuityAction.CONTINUE
 
@@ -90,8 +111,9 @@ class DecisionEngine:
                 reasons.append(f"STALE_RESOURCE:{resource_id}")
 
             if current.revision != expected.revision or current.digest != expected.digest:
-                action = self._stronger(action, ContinuityAction.REVALIDATE)
                 reasons.append(f"RESOURCE_HEAD_CHANGED:{resource_id}")
+                drift = comparator.classify(expected, current)
+                action = self._apply_drift(action, drift, resource_id, reasons)
 
         if recovery_requested and action is ContinuityAction.CONTINUE:
             action = ContinuityAction.RECOVER
@@ -105,13 +127,38 @@ class DecisionEngine:
         )
         return ContinuityDecision(action=action, reason_codes=reason_codes, witness=witness)
 
+    def _apply_drift(
+        self,
+        action: ContinuityAction,
+        drift: DriftClassification,
+        resource_id: str,
+        reasons: list[str],
+    ) -> ContinuityAction:
+        if drift is DriftClassification.COMPATIBLE:
+            reasons.append(f"SEMANTIC_COMPATIBLE:{resource_id}")
+            return action
+        if drift is DriftClassification.REVALIDATION_REQUIRED:
+            reasons.append(f"SEMANTIC_REVALIDATION_REQUIRED:{resource_id}")
+            return self._stronger(action, ContinuityAction.REVALIDATE)
+        if drift is DriftClassification.BREAKING:
+            reasons.append(f"SEMANTIC_BREAKING:{resource_id}")
+            return self._stronger(action, ContinuityAction.ABORT)
+        if drift is DriftClassification.UNKNOWN:
+            reasons.append(f"SEMANTIC_UNKNOWN:{resource_id}")
+            return self._stronger(action, ContinuityAction.PAUSE)
+
+        # A changed exact revision cannot truthfully be classified UNCHANGED.
+        reasons.append(f"SEMANTIC_COMPARATOR_CONTRADICTION:{resource_id}")
+        return self._stronger(action, ContinuityAction.PAUSE)
+
     @staticmethod
     def _stronger(current: ContinuityAction, candidate: ContinuityAction) -> ContinuityAction:
+        # Unknown state must block revalidation attempts until uncertainty is resolved.
         priority = {
             ContinuityAction.CONTINUE: 0,
             ContinuityAction.RECOVER: 1,
-            ContinuityAction.PAUSE: 2,
-            ContinuityAction.REVALIDATE: 3,
+            ContinuityAction.REVALIDATE: 2,
+            ContinuityAction.PAUSE: 3,
             ContinuityAction.ABORT: 4,
         }
         return candidate if priority[candidate] > priority[current] else current
