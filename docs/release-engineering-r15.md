@@ -35,11 +35,16 @@ The trusted publisher should be constrained to:
 
 The `pypi` GitHub environment should require explicit release approval.
 
+The publish job is additionally fail-closed behind the repository variable
+`HOWEDO_PYPI_PUBLISH_ENABLED=true`. If the variable is absent or any other value, a GitHub Release
+may build, verify, attest, and archive evidence, but the PyPI job is skipped.
+
 Public PyPI activation is separate from R15 software completion. It remains pending until:
 
 - the PyPI project/pending publisher is configured;
 - the package-name collision is rechecked immediately before first publication;
 - the repository license/distribution terms are explicitly decided;
+- `HOWEDO_PYPI_PUBLISH_ENABLED=true` is intentionally configured;
 - the first release is intentionally published.
 
 A pending PyPI Trusted Publisher does not reserve the project name.
