@@ -4,6 +4,9 @@ from hashlib import sha256
 from typing import TypedDict
 
 import pytest
+
+pytest.importorskip("langgraph")
+
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
