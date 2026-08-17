@@ -13,10 +13,10 @@ from howedo.adapter_conformance import ConformanceResult
 from howedo.adapter_contract import AdapterCapability, AdapterManifest
 from howedo.attestation import build_conformance_statement
 from howedo.trust_policy import (
-    AttestationTrustPolicy,
-    SignerVerificationContext,
     SVR_PREDICATE_V02,
     TRUST_ACCEPTED_PROPERTY,
+    AttestationTrustPolicy,
+    SignerVerificationContext,
     TrustDecision,
     TrustReasonCode,
     build_svr_statement,
