@@ -128,7 +128,9 @@ def test_tuf_bootstrap_rotates_root_and_fetches_consumer_profile(tmp_path: Path)
 def test_tuf_rejects_target_tampering(tmp_path: Path) -> None:
     profile_bytes = PROFILE_PATH.read_bytes()
     bootstrap, objects = _repository(profile_bytes)
-    objects[f"/targets/{DEFAULT_CONSUMER_TRUST_TARGET}"] = profile_bytes + b"\n "
+    tampered = bytearray(profile_bytes)
+    tampered[-1] ^= 1
+    objects[f"/targets/{DEFAULT_CONSUMER_TRUST_TARGET}"] = bytes(tampered)
 
     with pytest.raises(LengthOrHashMismatchError):
         fetch_consumer_trust_profile(
