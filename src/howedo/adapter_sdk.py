@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+from howedo.adapter_conformance import (
+    AdapterConformanceSuite,
+    AdapterFixture,
+    ConformanceResult,
+)
 from howedo.adapter_contract import (
     ADAPTER_CONTRACT_VERSION,
     AdapterBinding,
@@ -11,11 +16,6 @@ from howedo.adapter_contract import (
     RuntimeAdapterV1,
     RuntimeIdentity,
     require_recover,
-)
-from howedo.adapter_conformance import (
-    AdapterConformanceSuite,
-    AdapterFixture,
-    ConformanceResult,
 )
 
 __all__ = [
