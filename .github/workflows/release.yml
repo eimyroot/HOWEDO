@@ -145,6 +145,7 @@ jobs:
 
   pypi:
     name: publish to PyPI with Trusted Publishing
+    if: ${{ vars.HOWEDO_PYPI_PUBLISH_ENABLED == 'true' }}
     needs: build
     runs-on: ubuntu-latest
     environment: pypi
