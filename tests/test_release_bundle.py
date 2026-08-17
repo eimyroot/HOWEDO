@@ -92,3 +92,9 @@ def test_release_bundle_rejects_manifest_digest_tamper(tmp_path: Path) -> None:
     record["bundle_digest"] = "sha256:" + "0" * 64
     with pytest.raises(ValueError, match="bundle digest"):
         verify_release_bundle(record, root=tmp_path)
+
+
+def test_release_bundle_v1_schema_set_is_frozen() -> None:
+    expected = {"release-bundle.schema.json"}
+    actual = {p.name for p in Path("schemas/release-bundle-v1").glob("*.json")}
+    assert actual == expected
