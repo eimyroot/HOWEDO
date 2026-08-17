@@ -10,6 +10,14 @@ from howedo.domain import (
     Validity,
 )
 from howedo.kernel import DecisionEngine, StateRegistry
+from howedo.recall import (
+    DependencyEdge,
+    DependencyGraph,
+    RecallEngine,
+    RecallImpact,
+    RecallResult,
+    RecallSignal,
+)
 from howedo.semlock import CompatibilityRule, ExactSemanticComparator, RuleBasedSemanticComparator
 
 __all__ = [
@@ -19,8 +27,14 @@ __all__ = [
     "ContinuitySnapshot",
     "ContinuityWitness",
     "DecisionEngine",
+    "DependencyEdge",
+    "DependencyGraph",
     "DriftClassification",
     "ExactSemanticComparator",
+    "RecallEngine",
+    "RecallImpact",
+    "RecallResult",
+    "RecallSignal",
     "ResourceRevision",
     "RuleBasedSemanticComparator",
     "StateRegistry",

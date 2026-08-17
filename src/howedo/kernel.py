@@ -131,11 +131,12 @@ class DecisionEngine:
 
     @staticmethod
     def _stronger(current: ContinuityAction, candidate: ContinuityAction) -> ContinuityAction:
+        # Unknown state must block revalidation attempts until uncertainty is resolved.
         priority = {
             ContinuityAction.CONTINUE: 0,
             ContinuityAction.RECOVER: 1,
-            ContinuityAction.PAUSE: 2,
-            ContinuityAction.REVALIDATE: 3,
+            ContinuityAction.REVALIDATE: 2,
+            ContinuityAction.PAUSE: 3,
             ContinuityAction.ABORT: 4,
         }
         return candidate if priority[candidate] > priority[current] else current
