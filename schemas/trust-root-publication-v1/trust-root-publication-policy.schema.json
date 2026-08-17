@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://howedo.dev/schemas/trust-root-publication-v1/trust-root-publication-policy.schema.json",
+  "title": "HOWEDO Trust Root Publication Policy v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "minimum_root_keys",
+    "minimum_root_threshold",
+    "minimum_root_validity_days",
+    "policy_id",
+    "policy_version",
+    "require_consistent_snapshot",
+    "require_disjoint_role_keys",
+    "require_https_endpoints",
+    "required_spec_major"
+  ],
+  "properties": {
+    "minimum_root_keys": {"type": "integer", "minimum": 1},
+    "minimum_root_threshold": {"type": "integer", "minimum": 1},
+    "minimum_root_validity_days": {"type": "integer", "minimum": 1},
+    "policy_id": {"type": "string", "minLength": 1},
+    "policy_version": {"const": "howedo.trust-root-publication-policy.v1"},
+    "require_consistent_snapshot": {"type": "boolean"},
+    "require_disjoint_role_keys": {"type": "boolean"},
+    "require_https_endpoints": {"type": "boolean"},
+    "required_spec_major": {"type": "integer", "minimum": 1}
+  }
+}
