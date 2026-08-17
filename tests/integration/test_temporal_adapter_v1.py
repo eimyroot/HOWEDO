@@ -1,0 +1,96 @@
+from __future__ import annotations
+
+import asyncio
+import os
+from dataclasses import dataclass
+from hashlib import sha256
+from typing import Any
+
+import pytest
+
+if os.environ.get("HOWEDO_TEST_TEMPORAL") != "1":
+    pytest.skip("real Temporal integration is disabled", allow_module_level=True)
+
+pytest.importorskip("temporalio")
+
+from temporalio import workflow
+from temporalio.testing import WorkflowEnvironment
+from temporalio.worker import Worker
+
+from howedo.adapter_conformance import AdapterConformanceSuite
+from howedo.adapters.temporal_v1 import TemporalRuntimeAdapterV1
+from howedo.domain import ResourceRevision
+
+
+@workflow.defn
+class ContractWorkflow:
+    def __init__(self) -> None:
+        self._done = False
+
+    @workflow.run
+    async def run(self) -> bool:
+        await workflow.wait_condition(lambda: self._done)
+        return self._done
+
+    @workflow.signal
+    def resume(self) -> None:
+        self._done = True
+
+
+def revision(resource_id: str, version: str) -> ResourceRevision:
+    return ResourceRevision(
+        resource_id=resource_id,
+        revision=version,
+        digest=f"sha256:{sha256(version.encode()).hexdigest()}",
+    )
+
+
+@dataclass
+class TemporalFixture:
+    runtime: Any
+    target: Any
+    resources: tuple[ResourceRevision, ...]
+    current_heads: dict[str, ResourceRevision]
+
+    async def changed_heads(self) -> dict[str, ResourceRevision]:
+        return {"policy://deploy": revision("policy://deploy", "2")}
+
+    async def closed_target(self) -> Any:
+        return self.target
+
+
+def test_temporal_reference_bridge_passes_runtime_adapter_v1() -> None:
+    async def scenario() -> None:
+        task_queue = "howedo-r8-contract"
+        policy = revision("policy://deploy", "1")
+        adapter = TemporalRuntimeAdapterV1()
+
+        async with await WorkflowEnvironment.start_time_skipping() as env, Worker(
+            env.client,
+            task_queue=task_queue,
+            workflows=[ContractWorkflow],
+        ):
+            handle = await env.client.start_workflow(
+                ContractWorkflow.run,
+                id="howedo-r8-contract",
+                task_queue=task_queue,
+            )
+            fixture = TemporalFixture(
+                runtime=env.client,
+                target=handle,
+                resources=(policy,),
+                current_heads={policy.resource_id: policy},
+            )
+            results = await AdapterConformanceSuite().run(adapter, fixture)
+            AdapterConformanceSuite.assert_passed(results)
+
+            binding = await adapter.capture(env.client, handle, resources=(policy,))
+            await adapter.continue_after_validate(
+                env.client,
+                binding,
+                ("resume", ()),
+                current_heads={policy.resource_id: policy},
+            )
+            assert await handle.result() is True
+
+    asyncio.run(scenario())
