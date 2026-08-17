@@ -9,7 +9,7 @@ from hashlib import sha256
 from typing import Any
 
 from howedo.adapter_certification import ConformanceStatus, verify_conformance_record
-from howedo.attestation import CONFORMANCE_PREDICATE_V1, verify_conformance_statement
+from howedo.attestation import verify_conformance_statement
 
 TRUST_POLICY_VERSION = "howedo.attestation-trust-policy.v1"
 SVR_STATEMENT_V1 = "https://in-toto.io/Statement/v1"
@@ -247,7 +247,10 @@ def evaluate_attestation_trust(
         reasons.append(TrustReasonCode.PREDICATE_TYPE_NOT_ALLOWED)
     if artifact.get("artifact_version") not in policy.allowed_artifact_versions:
         reasons.append(TrustReasonCode.ARTIFACT_VERSION_NOT_ALLOWED)
-    if policy.require_conformant_status and artifact.get("status") != ConformanceStatus.CONFORMANT.value:
+    if (
+        policy.require_conformant_status
+        and artifact.get("status") != ConformanceStatus.CONFORMANT.value
+    ):
         reasons.append(TrustReasonCode.CONFORMANCE_STATUS_NOT_ALLOWED)
     if policy.require_transparency_log and not signer.transparency_log_verified:
         reasons.append(TrustReasonCode.TRANSPARENCY_REQUIRED)
@@ -343,7 +346,11 @@ def _artifact_checkout_sha(artifact: Mapping[str, Any]) -> str | None:
     if not isinstance(refs, list):
         return None
     prefix = "git-checkout://sha/"
-    values = {ref[len(prefix) :] for ref in refs if isinstance(ref, str) and ref.startswith(prefix)}
+    values = {
+        ref[len(prefix) :]
+        for ref in refs
+        if isinstance(ref, str) and ref.startswith(prefix)
+    }
     if len(values) != 1:
         return None
     return next(iter(values))
@@ -380,7 +387,7 @@ def _string_tuple(record: Mapping[str, Any], key: str) -> tuple[str, ...]:
 def _required_bool(record: Mapping[str, Any], key: str) -> bool:
     value = record[key]
     if not isinstance(value, bool):
-        raise ValueError(f"{key} must be a boolean")
+        raise TypeError(f"{key} must be a boolean")
     return value
 
 
