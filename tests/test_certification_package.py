@@ -66,8 +66,10 @@ def _policy() -> AttestationTrustPolicy:
         allowed_verifiers=("sigstore-cosign",),
         allowed_issuers=("https://token.actions.githubusercontent.com",),
         allowed_identity_patterns=(
-            "https://github.com/nulleimy/HOWEDO/.github/workflows/"
-            "consolidation.yml@refs/heads/main",
+            (
+                "https://github.com/nulleimy/HOWEDO/.github/workflows/"
+                "consolidation.yml@refs/heads/main"
+            ),
         ),
         allowed_repositories=("nulleimy/HOWEDO",),
         allowed_workflows=(".github/workflows/consolidation.yml",),

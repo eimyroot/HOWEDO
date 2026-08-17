@@ -65,8 +65,10 @@ def policy() -> AttestationTrustPolicy:
         allowed_verifiers=("sigstore-cosign",),
         allowed_issuers=("https://token.actions.githubusercontent.com",),
         allowed_identity_patterns=(
-            "https://github.com/nulleimy/HOWEDO/.github/workflows/"
-            "consolidation.yml@refs/heads/main",
+            (
+                "https://github.com/nulleimy/HOWEDO/.github/workflows/"
+                "consolidation.yml@refs/heads/main"
+            ),
         ),
         allowed_repositories=("nulleimy/HOWEDO",),
         allowed_workflows=(".github/workflows/consolidation.yml",),
@@ -117,8 +119,10 @@ def profile(current_policy: AttestationTrustPolicy | None = None) -> ConsumerTru
         allowed_crypto_verifiers=("sigstore-cosign",),
         allowed_issuers=("https://token.actions.githubusercontent.com",),
         allowed_identity_patterns=(
-            "https://github.com/nulleimy/HOWEDO/.github/workflows/"
-            "consolidation.yml@refs/heads/main",
+            (
+                "https://github.com/nulleimy/HOWEDO/.github/workflows/"
+                "consolidation.yml@refs/heads/main"
+            ),
         ),
         allowed_repositories=("nulleimy/HOWEDO",),
         allowed_workflows=(".github/workflows/consolidation.yml",),
@@ -216,8 +220,10 @@ def test_segment_glob_does_not_cross_path_segments() -> None:
         allowed_crypto_verifiers=("sigstore-cosign",),
         allowed_issuers=("https://token.actions.githubusercontent.com",),
         allowed_identity_patterns=(
-            "https://github.com/nulleimy/HOWEDO/.github/workflows/"
-            "consolidation.yml@refs/pull/*/merge",
+            (
+                "https://github.com/nulleimy/HOWEDO/.github/workflows/"
+                "consolidation.yml@refs/pull/*/merge"
+            ),
         ),
         allowed_repositories=("nulleimy/HOWEDO",),
         allowed_workflows=(".github/workflows/consolidation.yml",),

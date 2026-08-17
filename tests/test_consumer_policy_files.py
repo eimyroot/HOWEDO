@@ -15,8 +15,10 @@ def test_production_consumer_profile_is_main_only_and_pins_r11_policy() -> None:
     profile = _load("policies/reference/github-actions-consumer-trust-v1.json")
     assert profile.allowed_ref_patterns == ("refs/heads/main",)
     assert profile.allowed_identity_patterns == (
-        "https://github.com/nulleimy/HOWEDO/.github/workflows/"
-        "consolidation.yml@refs/heads/main",
+        (
+            "https://github.com/nulleimy/HOWEDO/.github/workflows/"
+            "consolidation.yml@refs/heads/main"
+        ),
     )
     assert profile.allowed_triggers == ("push", "workflow_dispatch")
     assert profile.trusted_policies[0].policy_digest == (
