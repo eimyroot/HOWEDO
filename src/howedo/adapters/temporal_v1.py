@@ -40,12 +40,27 @@ class TemporalRuntimeAdapterV1:
         return self._adapter.runtime_revision()
 
     async def resolve_identity(self, runtime: Any, target: Any) -> RuntimeIdentity:
-        execution = await self._adapter.resolve_execution(runtime, target)
+        run_id = target.run_id or target.result_run_id
+        if not run_id:
+            description = await target.describe()
+            run_id = description.run_id
+        if not run_id:
+            raise ValueError("Temporal target did not expose an exact run id")
+
+        exact = runtime.get_workflow_handle(
+            target.id,
+            run_id=run_id,
+            first_execution_run_id=target.first_execution_run_id,
+        )
+        description = await exact.describe()
+        if description.run_id != run_id:
+            raise ValueError("Temporal exact run identity mismatch")
+
         return RuntimeIdentity(
             runtime_family="temporal",
-            namespace=execution.namespace,
-            execution_id=execution.workflow_id,
-            execution_revision=execution.run_id,
+            namespace=runtime.namespace,
+            execution_id=target.id,
+            execution_revision=run_id,
         )
 
     async def capture(
