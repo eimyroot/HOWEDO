@@ -216,18 +216,23 @@ def verify_conformance_record(record: Mapping[str, Any]) -> ArtifactVerification
             reasons.append(ArtifactVerificationCode.STATUS_MISMATCH)
 
         evidence_refs = canonical["evidence_refs"]
-        if not isinstance(evidence_refs, list) or any(
-            not isinstance(item, str) or not item for item in evidence_refs
+        if (
+            not isinstance(evidence_refs, list)
+            or any(not isinstance(item, str) or not item for item in evidence_refs)
+            or evidence_refs != sorted(set(evidence_refs))
         ):
-            reasons.append(ArtifactVerificationCode.INVALID_RECORD)
-        elif evidence_refs != sorted(set(evidence_refs)):
             reasons.append(ArtifactVerificationCode.INVALID_RECORD)
 
         environment = canonical["environment"]
         expected_environment_keys = {"platform", "python_implementation", "python_version"}
-        if not isinstance(environment, Mapping) or set(environment) != expected_environment_keys:
-            reasons.append(ArtifactVerificationCode.INVALID_RECORD)
-        elif any(not isinstance(environment[key], str) or not environment[key] for key in environment):
+        if (
+            not isinstance(environment, Mapping)
+            or set(environment) != expected_environment_keys
+            or any(
+                not isinstance(environment[key], str) or not environment[key]
+                for key in environment
+            )
+        ):
             reasons.append(ArtifactVerificationCode.INVALID_RECORD)
     except (KeyError, TypeError, ValueError):
         reasons.append(ArtifactVerificationCode.INVALID_RECORD)
