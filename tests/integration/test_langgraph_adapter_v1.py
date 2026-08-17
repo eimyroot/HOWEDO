@@ -67,6 +67,15 @@ class LangGraphFixture:
         return bool(result["approved"] is True)
 
 
+def evidence_refs() -> tuple[str, ...]:
+    refs = ["test://langgraph-real-checkpoint"]
+    if run_id := os.environ.get("GITHUB_RUN_ID"):
+        refs.append(f"github-actions://run/{run_id}")
+    if sha := os.environ.get("GITHUB_SHA"):
+        refs.append(f"git://sha/{sha}")
+    return tuple(sorted(refs))
+
+
 def test_langgraph_reference_bridge_issues_conformance_artifact() -> None:
     async def scenario() -> None:
         graph, config = build_interrupted_graph("r9-conformance-artifact")
@@ -81,7 +90,7 @@ def test_langgraph_reference_bridge_issues_conformance_artifact() -> None:
         artifact = await AdapterConformanceArtifactBuilder().build(
             LangGraphRuntimeAdapterV1(),
             fixture,
-            evidence_refs=("test://langgraph-real-checkpoint",),
+            evidence_refs=evidence_refs(),
         )
         assert artifact.status is ConformanceStatus.CONFORMANT
         assert verify_conformance_record(artifact.record()).valid
