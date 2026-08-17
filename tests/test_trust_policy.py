@@ -13,17 +13,16 @@ from howedo.adapter_conformance import ConformanceResult
 from howedo.adapter_contract import AdapterCapability, AdapterManifest
 from howedo.attestation import build_conformance_statement
 from howedo.trust_policy import (
-    SVR_PREDICATE_V02,
-    TRUST_ACCEPTED_PROPERTY,
     AttestationTrustPolicy,
     SignerVerificationContext,
+    SVR_PREDICATE_V02,
+    TRUST_ACCEPTED_PROPERTY,
     TrustDecision,
     TrustReasonCode,
     build_svr_statement,
     evaluate_attestation_trust,
     verify_svr_statement,
 )
-
 
 CHECKOUT_SHA = "a" * 40
 
