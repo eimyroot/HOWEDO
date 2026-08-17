@@ -30,7 +30,7 @@ Every continuity check resolves to one of:
 - **Decision Engine** — deterministic continuity decisions.
 - **Continuity Witness** — reproducible evidence of each decision.
 
-## R0-R14 baseline
+## R0-R15 baseline
 
 The current development baseline contains:
 
@@ -62,7 +62,10 @@ The current development baseline contains:
 - optional TUF trust-root distribution and rotation for consumer trust profiles;
 - content-addressed `howedo.trust-distribution-receipt.v1` update evidence;
 - content-addressed `howedo.trust-root-publication-policy.v1` and `howedo.trust-root-publication-manifest.v1` contracts;
-- complete public TUF root-history verification plus an offline production root-ceremony / rotation / compromise runbook.
+- complete public TUF root-history verification plus an offline production root-ceremony / rotation / compromise runbook;
+- content-addressed `howedo.release-bundle.v1` binding wheel, sdist, CycloneDX SBOM, exact tag, commit, and tree;
+- required CI release-candidate build, clean-install, SBOM, and release-bundle replay on Python 3.12 and 3.13;
+- staged draft GitHub Release workflow with provenance/SBOM attestations and a separate fail-closed PyPI Trusted Publishing workflow.
 
 ## Installation profiles
 
@@ -72,7 +75,7 @@ The core package has no required runtime or cryptography dependencies:
 pip install howedo-continuity
 ```
 
-The adapter contract, conformance kit, artifact verifier, attestation statement builder/verifier, trust policy engine, consumer certification verifier, trust-distribution contract, trust-root publication contract, and SDK helpers are part of core and do not require a runtime vendor SDK or signing library merely to import HOWEDO. Executing TUF cryptographic verification requires the optional `tuf` profile.
+The adapter contract, conformance kit, artifact verifier, attestation statement builder/verifier, trust policy engine, consumer certification verifier, trust-distribution contract, trust-root publication contract, release-bundle verifier, and SDK helpers are part of core and do not require a runtime vendor SDK or signing library merely to import HOWEDO. Executing TUF cryptographic verification requires the optional `tuf` profile.
 
 Optional integrations are isolated extras:
 
@@ -83,6 +86,8 @@ pip install 'howedo-continuity[temporal]'
 pip install 'howedo-continuity[tuf]'
 pip install 'howedo-continuity[postgres,langgraph,temporal,tuf]'
 ```
+
+The `release` extra contains build/release tooling for HOWEDO maintainers; it is not a runtime requirement for consumers.
 
 ## Runtime adapter contract
 
@@ -259,9 +264,46 @@ howedo-build-trust-root-publication ...
 howedo-verify-trust-root-publication ...
 ```
 
-The R14 software publication mechanism is part of the R0-R14 development baseline. **Production activation is separate:** a real production root ceremony, production public root v1, publication endpoints, and production TUF repository are not created by normal HOWEDO CI. No production private root key is generated or stored by this repository workflow.
+The R14 software publication mechanism is preserved in the R0-R15 development baseline. **Production activation is separate:** a real production root ceremony, production public root v1, publication endpoints, and production TUF repository are not created by normal HOWEDO CI. No production private root key is generated or stored by this repository workflow.
 
 See `docs/trust-root-publication-v1.md`, `docs/operations/TUF_ROOT_CEREMONY.md`, and `docs/adr/ADR-0015-production-trust-root-publication.md`.
+
+## Distribution and release engineering
+
+R15 turns the Python codebase into a verifiable release candidate while preserving a fail-closed public-publication boundary.
+
+```text
+protected canonical main
+        ↓
+version tag vX.Y.Z
+        ↓
+wheel + sdist build once
+        ↓
+clean wheel installation
+        ↓
+reproducible CycloneDX 1.6 SBOM
+        ↓
+howedo.release-bundle.v1
+        ↓
+GitHub provenance + SBOM attestations
+        ↓
+verified assets attached to DRAFT GitHub Release
+        ↓
+human review + immutable release publication
+        ↓
+optional PyPI OIDC Trusted Publishing
+```
+
+Reference release-bundle commands:
+
+```bash
+howedo-build-release-bundle ...
+howedo-verify-release-bundle release.json --root dist ...
+```
+
+The public release boundary is intentionally separate from R15 software completion. Before the first public HOWEDO release, GitHub release immutability must be enabled, package/license terms must be explicitly decided, the package name must be rechecked immediately before publication, the PyPI Trusted Publisher and protected `pypi` environment must be configured, and `HOWEDO_PYPI_PUBLISH_ENABLED=true` must be intentionally activated. No long-lived PyPI token is part of the design.
+
+See `docs/release-engineering-r15.md` and `docs/adr/ADR-0016-release-engineering.md`.
 
 ## Canonical change channel
 
