@@ -1,4 +1,4 @@
-name: Consolidation R0-R6
+name: Conformance Matrix
 
 on:
   pull_request:
@@ -50,7 +50,7 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.12", "3.13"]
-        profile: ["dev", "postgres", "langgraph", "all"]
+        profile: ["dev", "postgres", "langgraph", "temporal", "all"]
     services:
       postgres:
         image: postgres:18
@@ -80,7 +80,8 @@ jobs:
             dev)       python -m pip install -e '.[dev]' ;;
             postgres)  python -m pip install -e '.[dev,postgres]' ;;
             langgraph) python -m pip install -e '.[dev,langgraph]' ;;
-            all)       python -m pip install -e '.[dev,postgres,langgraph]' ;;
+            temporal)  python -m pip install -e '.[dev,temporal]' ;;
+            all)       python -m pip install -e '.[dev,postgres,langgraph,temporal]' ;;
           esac
       - name: Verify optional import boundary
         shell: bash
@@ -92,8 +93,11 @@ jobs:
             langgraph)
               python -c 'from howedo.adapters.langgraph import LangGraphRuntimeAdapter; print("LANGGRAPH_ADAPTER_IMPORT=PASS")'
               ;;
+            temporal)
+              python -c 'from howedo.adapters.temporal import TemporalRuntimeAdapter; print("TEMPORAL_ADAPTER_IMPORT=PASS")'
+              ;;
             all)
-              python -c 'from howedo.storage.postgres import PostgresStorageAdapter; from howedo.adapters.langgraph import LangGraphRuntimeAdapter; print("ALL_ADAPTER_IMPORTS=PASS")'
+              python -c 'from howedo.storage.postgres import PostgresStorageAdapter; from howedo.adapters.langgraph import LangGraphRuntimeAdapter; from howedo.adapters.temporal import TemporalRuntimeAdapter; print("ALL_ADAPTER_IMPORTS=PASS")'
               ;;
             dev)
               python -c 'import howedo; print("DEV_CORE_IMPORT=PASS")'
@@ -118,3 +122,25 @@ jobs:
           assert actual == expected, f"protocol-v1 schema drift: {sorted(actual)}"
           print("PROTOCOL_V1_SCHEMA_SET=PASS")
           PY
+
+  temporal-integration:
+    name: temporal real integration (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    env:
+      HOWEDO_TEST_TEMPORAL: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install Temporal profile
+        run: python -m pip install -e '.[dev,temporal]'
+      - name: Ruff
+        run: ruff check .
+      - name: Real Temporal safe-resume integration
+        run: pytest tests/integration/test_temporal_adapter.py
