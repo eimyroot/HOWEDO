@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/nulleimy/HOWEDO/schemas/release-bundle-v1/release-bundle.schema.json",
+  "title": "HOWEDO Release Bundle v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "bundle_digest",
+    "bundle_version",
+    "files",
+    "git_commit",
+    "git_tree",
+    "package_name",
+    "package_version",
+    "tag"
+  ],
+  "properties": {
+    "bundle_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "bundle_version": {
+      "const": "howedo.release-bundle.v1"
+    },
+    "files": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["wheel", "sdist", "sbom"],
+      "properties": {
+        "wheel": {"$ref": "#/$defs/file"},
+        "sdist": {"$ref": "#/$defs/file"},
+        "sbom": {"$ref": "#/$defs/file"}
+      }
+    },
+    "git_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "git_tree": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "package_name": {
+      "const": "howedo-continuity"
+    },
+    "package_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tag": {
+      "type": "string",
+      "minLength": 2
+    }
+  },
+  "$defs": {
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["digest", "path", "size"],
+      "properties": {
+        "digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

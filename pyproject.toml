@@ -11,6 +11,9 @@ requires-python = ">=3.12"
 authors = [{ name = "Eimy Herrer" }]
 dependencies = []
 
+[project.urls]
+Repository = "https://github.com/nulleimy/HOWEDO"
+
 [project.scripts]
 howedo-verify-conformance = "howedo.certification_cli:main"
 howedo-build-attestation = "howedo.attestation_cli:build_main"
@@ -21,12 +24,15 @@ howedo-verify-certification-package = "howedo.consumer_cli:verify_main"
 howedo-fetch-consumer-trust-profile = "howedo.trust_distribution_cli:main"
 howedo-build-trust-root-publication = "howedo.trust_publication_cli:build_main"
 howedo-verify-trust-root-publication = "howedo.trust_publication_cli:verify_main"
+howedo-build-release-bundle = "howedo.release_cli:build_main"
+howedo-verify-release-bundle = "howedo.release_cli:verify_main"
 
 [project.optional-dependencies]
 postgres = ["psycopg[binary]>=3.2,<4"]
 langgraph = ["langgraph>=1.2,<2"]
 temporal = ["temporalio>=1.31,<2"]
 tuf = ["tuf>=7,<8", "securesystemslib[crypto]>=1.4,<2"]
+release = ["build>=1.3,<2", "twine>=6,<7", "cyclonedx-bom>=7.3,<8"]
 dev = ["pytest>=8", "ruff>=0.9"]
 
 [tool.setuptools]

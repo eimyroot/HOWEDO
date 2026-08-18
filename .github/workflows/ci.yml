@@ -37,8 +37,71 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - name: Install
-        run: python -m pip install -e '.[dev,postgres,langgraph,temporal,tuf]'
+        run: python -m pip install -e '.[dev,postgres,langgraph,temporal,tuf,release]'
       - name: Ruff
         run: ruff check .
       - name: Tests
         run: pytest
+      - name: Build and verify release candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf dist /tmp/howedo-release-smoke
+          mkdir -p dist/python dist/evidence
+
+          python -m build --outdir dist/python
+          python -m twine check dist/python/*
+
+          VERSION="$(python - <<'PY'
+          import tomllib
+          from pathlib import Path
+          data = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+          print(data["project"]["version"])
+          PY
+          )"
+          WHEEL="$(find dist/python -maxdepth 1 -type f -name '*.whl' -print -quit)"
+          SDIST="$(find dist/python -maxdepth 1 -type f -name '*.tar.gz' -print -quit)"
+          test -n "$WHEEL"
+          test -n "$SDIST"
+
+          python -m venv /tmp/howedo-release-smoke
+          /tmp/howedo-release-smoke/bin/python -m pip install --no-deps "$WHEEL"
+          /tmp/howedo-release-smoke/bin/python - <<PY
+          from importlib.metadata import version
+          import howedo
+          assert version("howedo-continuity") == "${VERSION}"
+          assert howedo is not None
+          PY
+
+          SBOM="dist/evidence/howedo-continuity-${VERSION}.cdx.json"
+          cyclonedx-py environment \
+            --spec-version 1.6 \
+            --output-format JSON \
+            --output-reproducible \
+            --output-file "$SBOM" \
+            /tmp/howedo-release-smoke/bin/python
+
+          COMMIT="$(git rev-parse HEAD)"
+          TREE="$(git rev-parse HEAD^{tree})"
+          WHEEL_REL="${WHEEL#dist/}"
+          SDIST_REL="${SDIST#dist/}"
+          SBOM_REL="${SBOM#dist/}"
+          MANIFEST="dist/evidence/howedo-continuity-${VERSION}.release.json"
+
+          howedo-build-release-bundle \
+            --root dist \
+            --version "$VERSION" \
+            --tag "v${VERSION}" \
+            --git-commit "$COMMIT" \
+            --git-tree "$TREE" \
+            --wheel "$WHEEL_REL" \
+            --sdist "$SDIST_REL" \
+            --sbom "$SBOM_REL" \
+            --output "$MANIFEST"
+
+          howedo-verify-release-bundle \
+            "$MANIFEST" \
+            --root dist \
+            --expected-tag "v${VERSION}" \
+            --expected-commit "$COMMIT" \
+            --expected-tree "$TREE"

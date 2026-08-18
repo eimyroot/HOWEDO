@@ -1,0 +1,42 @@
+name: PyPI Publish
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  pypi:
+    name: publish immutable release assets to PyPI
+    if: ${{ vars.HOWEDO_PYPI_PUBLISH_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: read
+      attestations: read
+      id-token: write
+    steps:
+      - name: Verify immutable GitHub Release and download Python assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release verify "$RELEASE_TAG"
+          mkdir -p dist/python
+          gh release download "$RELEASE_TAG" \
+            --pattern '*.whl' \
+            --pattern '*.tar.gz' \
+            --dir dist/python
+          test "$(find dist/python -maxdepth 1 -type f | wc -l)" -eq 2
+          for asset in dist/python/*; do
+            gh release verify-asset "$RELEASE_TAG" "$asset"
+          done
+
+      - name: Publish with PyPI Trusted Publishing
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33
+        with:
+          packages-dir: dist/python/
