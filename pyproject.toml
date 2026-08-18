@@ -33,6 +33,7 @@ langgraph = ["langgraph>=1.2,<2"]
 temporal = ["temporalio>=1.31,<2"]
 tuf = ["tuf>=7,<8", "securesystemslib[crypto]>=1.4,<2"]
 release = ["build>=1.3,<2", "twine>=6,<7", "cyclonedx-bom>=7.3,<8"]
+api = ["fastapi>=0.116,<1", "uvicorn>=0.35,<1"]
 dev = ["pytest>=8", "ruff>=0.9"]
 
 [tool.setuptools]
