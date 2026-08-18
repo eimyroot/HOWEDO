@@ -1,3 +1,7 @@
+import pytest
+
+pytest.importorskip("fastapi")
+
 from howedo.api.models import ContinuityCheckRequest, ResourceRevisionModel
 from howedo.api.service import check_continuity
 from howedo.domain import ContinuityAction, Validity
