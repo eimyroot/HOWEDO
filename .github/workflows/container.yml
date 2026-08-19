@@ -13,6 +13,11 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: nulleimy/howedo
 
+# Governance:
+# - sha-${github.sha} is the commit-bound image tag.
+# - main is a mutable convenience alias only.
+# - deployments MUST use IMAGE@sha256:<digest> as authority.
+
 jobs:
   verify:
     name: build and verify container
@@ -35,6 +40,8 @@ jobs:
 
       - name: Verify hardened runtime
         shell: bash
+        env:
+          HOWEDO_SKIP_BUILD: "1"
         run: ./scripts/verify_container.sh howedo:r16-ci
 
   publish:
@@ -57,7 +64,7 @@ jobs:
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
       - name: Login to GHCR
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -76,16 +83,55 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
 
       - name: Attest image provenance
-        uses: actions/attest@e59cbc1ad1ac2d59339667419eb8cdde6eb61e3d # v3.2.0
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
 
-      - name: Record immutable digest
+      - name: Verify and record immutable digest
         shell: bash
+        env:
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
         run: |
           set -euo pipefail
-          echo "IMAGE=${REGISTRY}/${IMAGE_NAME}"
-          echo "DIGEST=${{ steps.build.outputs.digest }}"
-          test -n "${{ steps.build.outputs.digest }}"
+
+          test -n "$IMAGE_DIGEST"
+
+          case "$IMAGE_DIGEST" in
+            sha256:*)
+              ;;
+            *)
+              echo "FAIL: invalid OCI digest: $IMAGE_DIGEST"
+              exit 1
+              ;;
+          esac
+
+          HEX="${IMAGE_DIGEST#sha256:}"
+          test "${#HEX}" -eq 64
+          case "$HEX" in
+            *[!0-9a-f]*)
+              echo "FAIL: malformed sha256 digest"
+              exit 1
+              ;;
+          esac
+
+          IMAGE="${REGISTRY}/${IMAGE_NAME}"
+          SHA_TAG="${IMAGE}:sha-${GITHUB_SHA}"
+          IMMUTABLE_REF="${IMAGE}@${IMAGE_DIGEST}"
+
+          echo "IMAGE=$IMAGE"
+          echo "SHA_TAG=$SHA_TAG"
+          echo "IMMUTABLE_REF=$IMMUTABLE_REF"
+          echo "DIGEST=$IMAGE_DIGEST"
+
+          {
+            echo "### HOWEDO R16.2 OCI artifact"
+            echo
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- Tag: \`${SHA_TAG}\`"
+            echo "- Digest: \`${IMAGE_DIGEST}\`"
+            echo "- Deployment authority: \`${IMMUTABLE_REF}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "R16_2_IMAGE_DIGEST_CONTRACT=PASS"

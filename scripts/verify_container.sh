@@ -9,8 +9,14 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "=== BUILD ==="
-docker build --pull -t "$IMAGE" .
+if [ "${HOWEDO_SKIP_BUILD:-0}" = "1" ]; then
+  echo "=== BUILD ==="
+  echo "BUILD=SKIPPED_PREBUILT_IMAGE"
+  docker image inspect "$IMAGE" >/dev/null
+else
+  echo "=== BUILD ==="
+  docker build --pull -t "$IMAGE" .
+fi
 
 echo "=== NON-ROOT CONTRACT ==="
 USER_VALUE="$(docker image inspect "$IMAGE" --format '{{.Config.User}}')"
@@ -60,6 +66,33 @@ done
 test "$HEALTH_OK" = "1"
 cat /tmp/howedo-health.json
 grep -q '"status":"ok"' /tmp/howedo-health.json
+
+echo
+echo "=== DOCKER HEALTHCHECK ==="
+
+DOCKER_HEALTH_OK=0
+
+for _ in $(seq 1 40); do
+  HEALTH_STATUS="$(
+    docker inspect       --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}'       "$CONTAINER"
+  )"
+
+  echo "DOCKER_HEALTH_STATUS=$HEALTH_STATUS"
+
+  if [ "$HEALTH_STATUS" = "healthy" ]; then
+    DOCKER_HEALTH_OK=1
+    break
+  fi
+
+  if [ "$HEALTH_STATUS" = "unhealthy" ]; then
+    docker inspect "$CONTAINER"       --format '{{json .State.Health}}'
+    exit 1
+  fi
+
+  sleep 1
+done
+
+test "$DOCKER_HEALTH_OK" = "1"
 
 echo
 echo "=== READY ==="
