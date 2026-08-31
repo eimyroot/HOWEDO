@@ -3,7 +3,7 @@
     "sigstore-cosign"
   ],
   "allowed_identity_patterns": [
-    "https://github.com/nulleimy/HOWEDO/.github/workflows/consolidation.yml@refs/heads/main"
+    "https://github.com/eimyroot/HOWEDO/.github/workflows/consolidation.yml@refs/heads/main"
   ],
   "allowed_issuers": [
     "https://token.actions.githubusercontent.com"
@@ -12,7 +12,7 @@
     "refs/heads/main"
   ],
   "allowed_repositories": [
-    "nulleimy/HOWEDO"
+    "eimyroot/HOWEDO"
   ],
   "allowed_triggers": [
     "push",
@@ -22,14 +22,14 @@
     ".github/workflows/consolidation.yml"
   ],
   "expected_workflow_name": "Conformance Matrix",
-  "profile_digest": "sha256:312018c9e05bfdb9ffddf0f71ad80c3002ab185c90cc605e3295a2a0dd34d5a5",
-  "profile_id": "https://github.com/nulleimy/HOWEDO/policies/reference/github-actions-consumer-trust-v1",
+  "profile_digest": "sha256:4cb108e0526a6f92df45a4b3aa38c62ff95255d8973ed41de2f5df58a5984311",
+  "profile_id": "https://github.com/eimyroot/HOWEDO/policies/reference/github-actions-consumer-trust-v1",
   "profile_version": "howedo.consumer-trust-profile.v1",
   "require_transparency_log": true,
   "trusted_policies": [
     {
-      "policy_digest": "sha256:df956d0249936667287b42534030ec0594c9e84aad36f348f48614c2cee0e9d7",
-      "policy_id": "https://github.com/nulleimy/HOWEDO/policies/reference/github-actions-conformance-trust-v1"
+      "policy_digest": "sha256:5a757c5ed7de3f78adc5fcc7127a254342246d0ebcaeaff14dfe6c4c6dc9432f",
+      "policy_id": "https://github.com/eimyroot/HOWEDO/policies/reference/github-actions-conformance-trust-v1"
     }
   ],
   "trusted_svr_verifier_ids": [
