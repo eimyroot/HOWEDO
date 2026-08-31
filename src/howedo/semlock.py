@@ -27,6 +27,10 @@ class ExactSemanticComparator:
     ) -> DriftClassification:
         if expected == current:
             return DriftClassification.UNCHANGED
+        if expected.resource_id != current.resource_id:
+            return DriftClassification.UNKNOWN
+        if expected.revision == current.revision and expected.digest != current.digest:
+            return DriftClassification.UNKNOWN
         return DriftClassification.REVALIDATION_REQUIRED
 
 
@@ -44,6 +48,8 @@ class RuleBasedSemanticComparator:
 
     Rules are immutable inputs to the continuity decision. Missing rules never
     imply compatibility; they fall back to REVALIDATION_REQUIRED by default.
+    An immutable revision identifier with conflicting content is never eligible
+    for a compatibility override.
     """
 
     rules: tuple[CompatibilityRule, ...] = ()
@@ -52,6 +58,8 @@ class RuleBasedSemanticComparator:
     def __post_init__(self) -> None:
         seen: dict[tuple[str, str, str], DriftClassification] = {}
         for rule in self.rules:
+            if not rule.resource_id or not rule.from_revision or not rule.to_revision:
+                raise ValueError("semantic compatibility rule fields must be non-empty")
             key = (rule.resource_id, rule.from_revision, rule.to_revision)
             existing = seen.get(key)
             if existing is not None and existing is not rule.classification:
@@ -65,6 +73,10 @@ class RuleBasedSemanticComparator:
     ) -> DriftClassification:
         if expected == current:
             return DriftClassification.UNCHANGED
+        if expected.resource_id != current.resource_id:
+            return DriftClassification.UNKNOWN
+        if expected.revision == current.revision and expected.digest != current.digest:
+            return DriftClassification.UNKNOWN
 
         for rule in self.rules:
             if (
