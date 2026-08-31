@@ -38,6 +38,14 @@ class ResourceRevision:
     revision: str
     digest: str
 
+    def __post_init__(self) -> None:
+        if not self.resource_id:
+            raise ValueError("resource_id must be non-empty")
+        if not self.revision:
+            raise ValueError("revision must be non-empty")
+        if not self.digest:
+            raise ValueError("digest must be non-empty")
+
     def canonical(self) -> dict[str, str]:
         return {
             "digest": self.digest,
@@ -53,6 +61,9 @@ class ContinuitySnapshot:
 
     @classmethod
     def build(cls, resources: tuple[ResourceRevision, ...]) -> ContinuitySnapshot:
+        resource_ids = tuple(item.resource_id for item in resources)
+        if len(set(resource_ids)) != len(resource_ids):
+            raise ValueError("continuity snapshot resource ids must be unique")
         ordered = tuple(sorted(resources, key=lambda item: item.resource_id))
         payload = [item.canonical() for item in ordered]
         encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
