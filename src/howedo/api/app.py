@@ -1,9 +1,15 @@
 from __future__ import annotations
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 
-from .models import ContinuityCheckRequest, ContinuityCheckResponse, HealthResponse
-from .service import check_continuity
+from .models import (
+    ContinuityCheckRequest,
+    ContinuityCheckResponse,
+    HealthResponse,
+    RecoveryCheckRequest,
+    RecoveryCheckResponse,
+)
+from .service import check_continuity, check_recovery
 
 
 def create_app() -> FastAPI:
@@ -43,7 +49,23 @@ def create_app() -> FastAPI:
     def continuity_check(
         request: ContinuityCheckRequest,
     ) -> ContinuityCheckResponse:
-        return check_continuity(request)
+        try:
+            return check_continuity(request)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.post(
+        "/v1/recovery/check",
+        response_model=RecoveryCheckResponse,
+        tags=["recovery"],
+    )
+    def recovery_check(
+        request: RecoveryCheckRequest,
+    ) -> RecoveryCheckResponse:
+        try:
+            return check_recovery(request)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     return app
 
