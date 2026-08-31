@@ -11,7 +11,7 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: nulleimy/howedo
+  IMAGE_NAME: eimyroot/howedo
 
 # Governance:
 # - sha-${github.sha} is the commit-bound image tag.
