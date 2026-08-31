@@ -24,9 +24,9 @@ from howedo.trust_distribution import (
 )
 
 PROFILE_PATH = Path("policies/reference/github-actions-consumer-trust-v1.json")
-EXPECTED_PROFILE_DIGEST = "sha256:312018c9e05bfdb9ffddf0f71ad80c3002ab185c90cc605e3295a2a0dd34d5a5"
+EXPECTED_PROFILE_DIGEST = "sha256:4cb108e0526a6f92df45a4b3aa38c62ff95255d8973ed41de2f5df58a5984311"
 EXPECTED_PROFILE_ID = (
-    "https://github.com/nulleimy/HOWEDO/policies/reference/"
+    "https://github.com/eimyroot/HOWEDO/policies/reference/"
     "github-actions-consumer-trust-v1"
 )
 

@@ -3,7 +3,7 @@
     "howedo.adapter-conformance-artifact.v1"
   ],
   "allowed_identity_patterns": [
-    "https://github.com/nulleimy/HOWEDO/.github/workflows/consolidation.yml@refs/pull/*/merge"
+    "https://github.com/eimyroot/HOWEDO/.github/workflows/consolidation.yml@refs/pull/*/merge"
   ],
   "allowed_issuers": [
     "https://token.actions.githubusercontent.com"
@@ -15,7 +15,7 @@
     "refs/pull/*/merge"
   ],
   "allowed_repositories": [
-    "nulleimy/HOWEDO"
+    "eimyroot/HOWEDO"
   ],
   "allowed_triggers": [
     "pull_request"
@@ -26,8 +26,8 @@
   "allowed_workflows": [
     ".github/workflows/consolidation.yml"
   ],
-  "policy_digest": "sha256:93733519d6afa8911208abd99c0b1dea0b8e8df01e7892a930b12390af15e5ac",
-  "policy_id": "https://github.com/nulleimy/HOWEDO/policies/test/github-actions-pr-conformance-trust-v1",
+  "policy_digest": "sha256:34e39721b8684e09dcdb9db969a90c3cb0f1a5ab6425641e967ec9ea5139760e",
+  "policy_id": "https://github.com/eimyroot/HOWEDO/policies/test/github-actions-pr-conformance-trust-v1",
   "policy_version": "howedo.attestation-trust-policy.v1",
   "require_conformant_status": true,
   "require_execution_sha_matches_artifact_checkout": true,
