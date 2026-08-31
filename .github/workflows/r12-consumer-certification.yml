@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   consumer-replay:
-    name: replay frozen legacy R11 evidence
+    name: replay canonical R11 evidence
     runs-on: ubuntu-latest
     env:
       HOWEDO_R11_SOURCE_RUN_ID: "31992072790"
