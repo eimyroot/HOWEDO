@@ -13,22 +13,23 @@ permissions:
 
 jobs:
   consumer-replay:
-    name: replay canonical R11 evidence
+    name: replay frozen legacy R11 evidence
     runs-on: ubuntu-latest
     env:
       HOWEDO_R11_SOURCE_RUN_ID: "31992072790"
       HOWEDO_R11_SOURCE_SHA: "9b33854b54d902bc32d68beae92cffaff9d2f49d"
       HOWEDO_R11_SOURCE_REF: "refs/heads/main"
       HOWEDO_R11_SOURCE_TRIGGER: "push"
+      HOWEDO_R11_SOURCE_REPOSITORY: "nulleimy/HOWEDO"
       HOWEDO_R11_SOURCE_IDENTITY: "https://github.com/nulleimy/HOWEDO/.github/workflows/consolidation.yml@refs/heads/main"
       HOWEDO_R11_SOURCE_ISSUER: "https://token.actions.githubusercontent.com"
-      HOWEDO_R11_POLICY: "policies/reference/github-actions-conformance-trust-v1.json"
-      HOWEDO_CONSUMER_PROFILE: "policies/reference/github-actions-consumer-trust-v1.json"
+      HOWEDO_R11_POLICY: "policies/legacy/nulleimy/github-actions-conformance-trust-v1.json"
+      HOWEDO_CONSUMER_PROFILE: "policies/legacy/nulleimy/github-actions-consumer-trust-v1.json"
       HOWEDO_EXPECTED_CONSUMER_PROFILE_DIGEST: "sha256:312018c9e05bfdb9ffddf0f71ad80c3002ab185c90cc605e3295a2a0dd34d5a5"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
           cache: pip
@@ -56,7 +57,7 @@ jobs:
           print("HOWEDO_R12_CONSUMER_IMPORT=PASS")
           PY
 
-      - name: Freeze R12 schema filenames and reference profile digest
+      - name: Freeze R12 schema filenames and legacy profile digest
         run: |
           python - <<'PY'
           import json
@@ -80,16 +81,16 @@ jobs:
               "HOWEDO_EXPECTED_CONSUMER_PROFILE_DIGEST"
           ]
           assert profile["expected_workflow_name"] == "Conformance Matrix"
-          print("HOWEDO_R12_SCHEMA_AND_PROFILE_FREEZE=PASS")
+          print("HOWEDO_R12_SCHEMA_AND_LEGACY_PROFILE_FREEZE=PASS")
           PY
 
-      - name: Download canonical R11 production evidence
-        uses: actions/download-artifact@v5
+      - name: Download frozen legacy R11 production evidence
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           name: howedo-signed-conformance-attestations
           path: r11-evidence
           github-token: ${{ github.token }}
-          repository: nulleimy/HOWEDO
+          repository: eimyroot/HOWEDO
           run-id: ${{ env.HOWEDO_R11_SOURCE_RUN_ID }}
 
       - name: Verify canonical R11 fixture shape
@@ -120,7 +121,7 @@ jobs:
               --svr-bundle "r11-evidence/signed-attestations/${base}.svr.sigstore.json" \
               --issuer "$HOWEDO_R11_SOURCE_ISSUER" \
               --identity "$HOWEDO_R11_SOURCE_IDENTITY" \
-              --repository "$GITHUB_REPOSITORY" \
+              --repository "$HOWEDO_R11_SOURCE_REPOSITORY" \
               --workflow ".github/workflows/consolidation.yml" \
               --execution-sha "$HOWEDO_R11_SOURCE_SHA" \
               --execution-ref "$HOWEDO_R11_SOURCE_REF" \
@@ -161,7 +162,7 @@ jobs:
           print("HOWEDO_R12_PACKAGE_FILES=4x7")
           PY
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: howedo-r12-consumer-certification-packages
           path: certification-packages/**
