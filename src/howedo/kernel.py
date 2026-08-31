@@ -106,6 +106,10 @@ class DecisionEngine:
                 reasons.append(f"INVALID_RESOURCE:{resource_id}")
                 continue
 
+            if resource_validity is Validity.SUPERSEDED:
+                action = self._stronger(action, ContinuityAction.REVALIDATE)
+                reasons.append(f"SUPERSEDED_RESOURCE:{resource_id}")
+
             if resource_validity in {Validity.STALE, Validity.REVALIDATING}:
                 action = self._stronger(action, ContinuityAction.REVALIDATE)
                 reasons.append(f"STALE_RESOURCE:{resource_id}")
