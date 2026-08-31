@@ -8,11 +8,13 @@ version = "0.0.1"
 description = "Vendor-neutral continuity and integrity kernel for long-lived AI agents"
 readme = "README.md"
 requires-python = ">=3.12"
+license = "Apache-2.0"
 authors = [{ name = "Eimy Herrer" }]
 dependencies = []
 
 [project.urls]
-Repository = "https://github.com/nulleimy/HOWEDO"
+Repository = "https://github.com/eimyroot/HOWEDO"
+Issues = "https://github.com/eimyroot/HOWEDO/issues"
 
 [project.scripts]
 howedo-verify-conformance = "howedo.certification_cli:main"
