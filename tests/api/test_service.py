@@ -5,8 +5,8 @@ pytest.importorskip("fastapi")
 from howedo.api.models import (
     ContinuityCheckRequest,
     FenceTokenModel,
-    RecoveryCheckRequest,
     RecoveryCheckpointModel,
+    RecoveryCheckRequest,
     ResourceRevisionModel,
 )
 from howedo.api.service import check_continuity, check_recovery
