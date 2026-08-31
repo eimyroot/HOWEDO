@@ -11,8 +11,12 @@ from howedo import (
 )
 
 
-def revision(resource: str, version: str) -> ResourceRevision:
-    return ResourceRevision(resource_id=resource, revision=version, digest=f"sha256:{version}")
+def revision(resource: str, version: str, digest: str | None = None) -> ResourceRevision:
+    return ResourceRevision(
+        resource_id=resource,
+        revision=version,
+        digest=digest or f"sha256:{version}",
+    )
 
 
 def changed_snapshot() -> tuple[StateRegistry, object]:
@@ -52,6 +56,33 @@ def test_explicit_compatible_change_can_continue() -> None:
 
     assert decision.action is ContinuityAction.CONTINUE
     assert "SEMANTIC_COMPATIBLE:tool://github/create-pr" in decision.reason_codes
+
+
+def test_same_revision_with_conflicting_digest_is_never_compatible() -> None:
+    expected = revision("tool://github/create-pr", "1", "sha256:one")
+    current = revision("tool://github/create-pr", "1", "sha256:two")
+    comparator = RuleBasedSemanticComparator(
+        rules=(
+            CompatibilityRule(
+                resource_id="tool://github/create-pr",
+                from_revision="1",
+                to_revision="1",
+                classification=DriftClassification.COMPATIBLE,
+            ),
+        )
+    )
+    registry = StateRegistry()
+    registry.register(expected)
+    snapshot = registry.snapshot([expected.resource_id])
+
+    decision = DecisionEngine().check(
+        snapshot,
+        current_heads={current.resource_id: current},
+        semantic_comparator=comparator,
+    )
+
+    assert decision.action is ContinuityAction.PAUSE
+    assert "SEMANTIC_UNKNOWN:tool://github/create-pr" in decision.reason_codes
 
 
 def test_breaking_change_aborts() -> None:
