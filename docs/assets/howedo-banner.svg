@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="480" viewBox="0 0 1600 480" role="img" aria-labelledby="title desc">
+  <title id="title">HOWEDO</title>
+  <desc id="desc">Reality-aware continuity control plane for autonomous AI agents.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#071019"/>
+      <stop offset=".55" stop-color="#0a111a"/>
+      <stop offset="1" stop-color="#05070a"/>
+    </linearGradient>
+    <radialGradient id="glowA" cx=".18" cy=".12" r=".75">
+      <stop offset="0" stop-color="#78ffd6" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#78ffd6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowB" cx=".9" cy=".18" r=".7">
+      <stop offset="0" stop-color="#8db8ff" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#8db8ff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="stroke" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#78ffd6"/>
+      <stop offset=".5" stop-color="#b7ffe9"/>
+      <stop offset="1" stop-color="#8db8ff"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1600" height="480" rx="36" fill="url(#bg)"/>
+  <rect width="1600" height="480" rx="36" fill="url(#glowA)"/>
+  <rect width="1600" height="480" rx="36" fill="url(#glowB)"/>
+
+  <g opacity=".14" stroke="#aaffea">
+    <path d="M0 112H1600M0 240H1600M0 368H1600"/>
+    <path d="M220 0V480M500 0V480M780 0V480M1060 0V480M1340 0V480"/>
+  </g>
+
+  <g transform="translate(112 118)">
+    <rect x="0" y="0" width="104" height="104" rx="26" fill="#0a1717" stroke="url(#stroke)" stroke-width="2"/>
+    <path d="M25 53h16l9-23 14 46 10-23h15" fill="none" stroke="url(#stroke)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="25" cy="53" r="5" fill="#78ffd6"/>
+    <circle cx="89" cy="53" r="5" fill="#8db8ff"/>
+  </g>
+
+  <text x="258" y="202" fill="#edfff9" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="92" font-weight="800" letter-spacing="-4">HOWEDO</text>
+  <text x="263" y="252" fill="#78ffd6" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20" font-weight="700" letter-spacing="4">REALITY-AWARE CONTINUITY CONTROL PLANE</text>
+  <text x="263" y="306" fill="#a8c2ba" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="25">Validate state · semantics · dependencies · fences · recovery before autonomous execution continues.</text>
+
+  <g transform="translate(1180 352)" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" font-weight="700">
+    <rect x="0" y="0" width="116" height="42" rx="21" fill="#78ffd6" fill-opacity=".09" stroke="#78ffd6" stroke-opacity=".35"/>
+    <text x="22" y="27" fill="#78ffd6">CONTINUE</text>
+    <rect x="132" y="0" width="104" height="42" rx="21" fill="#fff" fill-opacity=".025" stroke="#fff" stroke-opacity=".12"/>
+    <text x="154" y="27" fill="#b9cec7">PAUSE</text>
+    <rect x="252" y="0" width="118" height="42" rx="21" fill="#8db8ff" fill-opacity=".08" stroke="#8db8ff" stroke-opacity=".3"/>
+    <text x="271" y="27" fill="#a8c8ff">RECOVER</text>
+  </g>
+
+  <path d="M110 399C420 330 670 443 920 382s430-35 575-101" fill="none" stroke="url(#stroke)" stroke-opacity=".34" stroke-width="2"/>
+  <circle cx="110" cy="399" r="5" fill="#78ffd6"/>
+  <circle cx="1495" cy="281" r="5" fill="#8db8ff"/>
+</svg>

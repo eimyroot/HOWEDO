@@ -1,97 +1,176 @@
+![HOWEDO — Reality-aware continuity control plane](docs/assets/howedo-banner.svg)
+
 # HOWEDO
 
-**Continuity infrastructure for long-lived and autonomous AI agents.**
+**Reality-aware continuity and integrity control plane for long-lived and autonomous AI agents.**
 
-HOWEDO determines whether an agent can safely continue after the reality it depends on has changed.
+[![CI](https://github.com/eimyroot/HOWEDO/actions/workflows/ci.yml/badge.svg)](https://github.com/eimyroot/HOWEDO/actions/workflows/ci.yml)
+[![Container](https://github.com/eimyroot/HOWEDO/actions/workflows/container.yml/badge.svg)](https://github.com/eimyroot/HOWEDO/actions/workflows/container.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-78ffd6)](LICENSE)
 
-## Product boundary
+HOWEDO answers one operational question:
 
-HOWEDO is **not** an agent runtime, workflow engine, memory database, IAM system, sandbox, or observability platform.
+> **Is the reality this execution depends on still valid enough for the agent to continue?**
 
-It is a vendor-neutral continuity and integrity control plane that evaluates exact state revisions, dependency validity, semantic compatibility, concurrent writes, and recovery validity.
+Persistence can restore what an agent knew. HOWEDO evaluates whether that state, its dependencies,
+its semantic assumptions, concurrent-write fences, and recovery binding are still valid **now**.
 
-## Core decision contract
+## Operator cockpit
 
-Every continuity check resolves to one of:
+HOWEDO ships a lightweight cockpit in the same FastAPI process as the service API.
 
-- `CONTINUE`
-- `PAUSE`
-- `REVALIDATE`
-- `ABORT`
-- `RECOVER`
+```text
+http://127.0.0.1:8000/
+http://127.0.0.1:8000/cockpit
+```
+
+The cockpit is intentionally presentation-only. It does not own continuity semantics, persistence,
+or runtime control. It calls the same public API that external consumers use.
+
+### Run with Docker Compose
+
+```bash
+docker compose up --build
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8000/
+```
+
+### Run from Python
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -e '.[api]'
+howedo-cockpit
+```
+
+Use a non-loopback bind only when you intentionally want to expose the service:
+
+```bash
+howedo-cockpit --host 0.0.0.0 --port 8000
+```
+
+Health and API documentation:
+
+```text
+GET  /health
+GET  /ready
+GET  /docs
+POST /v1/continuity/check
+POST /v1/recovery/check
+```
+
+## Decision contract
+
+Every continuity evaluation resolves to one of five actions:
+
+| Action | Meaning |
+| --- | --- |
+| `CONTINUE` | The bound reality is still valid for normal continuation. |
+| `PAUSE` | The execution must stop and wait for a safe condition or operator action. |
+| `REVALIDATE` | The execution requires a fresh validation step before proceeding. |
+| `ABORT` | The bound execution must not continue. |
+| `RECOVER` | A validated recovery binding permits safe continuation from a checkpoint. |
+
+## Architecture
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ Presentation boundary                                       │
+│ Cockpit · FastAPI · OpenAPI                                 │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────┐
+│ Application/service boundary                                │
+│ Request validation · DTO mapping · stable public endpoints  │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────┐
+│ Continuity kernel                                            │
+│ STATE · SEMLOCK · RECALL · CONCUR · RECOVERY · DECISION     │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────┐
+│ Evidence + trust                                             │
+│ Witness · conformance · in-toto · trust policy · TUF        │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────┐
+│ Adapters                                                     │
+│ PostgreSQL · LangGraph · Temporal · future runtime bridges   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+The architecture rule is strict: **adapters and presentation may invoke HOWEDO semantics; they do
+not redefine them.**
+
+Detailed scaffold and dependency-direction rules are in
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Core subsystems
 
-- **State Registry** — immutable resource identities and revisions.
+- **State Registry** — immutable resource identities and exact revisions.
 - **SEMLOCK** — semantic snapshot and compatibility checks.
 - **RECALL** — dependency graph and propagated invalidation.
 - **CONCUR** — expected-head checks, fencing, and conflict detection.
-- **Recovery** — validates restored state against current reality.
+- **Recovery** — safe-resume validation against current reality.
 - **Decision Engine** — deterministic continuity decisions.
-- **Continuity Witness** — reproducible evidence of each decision.
+- **Continuity Witness** — reproducible evidence for each decision.
 
-## R0-R15 baseline
+## Minimal API example
 
-The current development baseline contains:
+```bash
+curl -sS http://127.0.0.1:8000/v1/continuity/check \
+  -H 'content-type: application/json' \
+  -d '{
+    "snapshot": [{
+      "resource_id": "repo://example",
+      "revision": "git:abc",
+      "digest": "sha256:abc"
+    }],
+    "current_heads": [{
+      "resource_id": "repo://example",
+      "revision": "git:abc",
+      "digest": "sha256:abc"
+    }]
+  }'
+```
 
-- deterministic continuity kernel and witness contract;
-- SEMLOCK semantic drift classification;
-- RECALL dependency invalidation;
-- CONCUR expected-head and fencing checks;
-- recovery validity / safe-resume gating;
-- stable `howedo.protocol.v1` schemas;
-- optional PostgreSQL reference persistence adapter;
-- optional LangGraph OSS runtime adapter;
-- optional Temporal OSS Python runtime adapter;
-- vendor-neutral `howedo.runtime-adapter.v1` contract;
-- executable runtime-adapter conformance kit;
-- third-party adapter SDK surface and reference bridges;
-- content-addressed `howedo.adapter-conformance-artifact.v1` records;
-- core-only conformance artifact verifier and CLI;
-- CI-produced evidence artifacts for LangGraph and Temporal reference adapters;
-- in-toto Statement v1 binding for exact conformance artifacts;
-- core-only attestation builder and semantic verifier CLIs;
-- Sigstore keyless reference signing through GitHub Actions OIDC;
-- content-addressed `howedo.attestation-trust-policy.v1` consumer policies;
-- deterministic `ACCEPT` / `REJECT` attestation trust evaluation;
-- Sigstore/Cosign reference crypto-verifier adapter;
-- standard in-toto Simple Verification Result v0.2 trust receipts;
-- content-addressed `howedo.consumer-trust-profile.v1` relying-party expectations;
-- portable `howedo.certification-package.v1` evidence packages;
-- independent consumer replay of the R9 → R11 chain, including cryptographically verified GitHub workflow-name claims and pinned consumer-profile digests;
-- optional TUF trust-root distribution and rotation for consumer trust profiles;
-- content-addressed `howedo.trust-distribution-receipt.v1` update evidence;
-- content-addressed `howedo.trust-root-publication-policy.v1` and `howedo.trust-root-publication-manifest.v1` contracts;
-- complete public TUF root-history verification plus an offline production root-ceremony / rotation / compromise runbook;
-- content-addressed `howedo.release-bundle.v1` binding wheel, sdist, CycloneDX SBOM, exact tag, commit, and tree;
-- required CI release-candidate build, clean-install, SBOM, and release-bundle replay on Python 3.12 and 3.13;
-- staged draft GitHub Release workflow with provenance/SBOM attestations and a separate fail-closed PyPI Trusted Publishing workflow.
+For exact matching state, the expected action is `CONTINUE` and the response includes a continuity
+witness. Unknown, stale, incompatible, or conflicting state is handled by the kernel rather than
+silently treated as current.
 
 ## Installation profiles
 
-The core package has no required runtime or cryptography dependencies:
+The continuity core has no required runtime or cryptography dependencies:
 
 ```bash
 pip install howedo-continuity
 ```
 
-The adapter contract, conformance kit, artifact verifier, attestation statement builder/verifier, trust policy engine, consumer certification verifier, trust-distribution contract, trust-root publication contract, release-bundle verifier, and SDK helpers are part of core and do not require a runtime vendor SDK or signing library merely to import HOWEDO. Executing TUF cryptographic verification requires the optional `tuf` profile.
-
 Optional integrations are isolated extras:
 
 ```bash
+pip install 'howedo-continuity[api]'
 pip install 'howedo-continuity[postgres]'
 pip install 'howedo-continuity[langgraph]'
 pip install 'howedo-continuity[temporal]'
 pip install 'howedo-continuity[tuf]'
-pip install 'howedo-continuity[postgres,langgraph,temporal,tuf]'
 ```
 
-The `release` extra contains build/release tooling for HOWEDO maintainers; it is not a runtime requirement for consumers.
+Maintainer tooling:
+
+```bash
+pip install -e '.[dev,api,postgres,langgraph,temporal,tuf,release]'
+```
 
 ## Runtime adapter contract
 
-`howedo.runtime-adapter.v1` defines the narrow interoperability boundary for external runtimes:
+`howedo.runtime-adapter.v1` keeps the interoperability boundary deliberately narrow:
 
 ```text
 exact runtime identity
@@ -105,232 +184,96 @@ RECOVER only
 continue exact bound execution
 ```
 
-A conforming adapter declares a content-addressed capability manifest and exposes exact identity, capture, validation, and continuation operations. The shared conformance kit verifies the vendor-neutral invariants; runtime-specific fixtures prove exact targeting and real continuation behavior.
+Implemented reference integrations:
 
-See `docs/runtime-adapter-v1.md`, `docs/third-party-adapters.md`, and `examples/third_party_runtime_adapter.py`.
+- PostgreSQL persistence adapter;
+- LangGraph OSS exact checkpoint binding;
+- Temporal OSS exact `namespace + workflow_id + run_id` binding;
+- Sigstore/Cosign verification for the reference trust flow;
+- The Update Framework (TUF) for optional trust-profile distribution and root rotation.
 
-## Conformance artifacts
+Future adapters can target other runtimes without moving continuity semantics out of the kernel.
 
-R9 turns a conformance run into a portable content-addressed JSON record. A saved artifact can be verified without installing LangGraph, Temporal, PostgreSQL, or another runtime SDK:
+## Evidence and trust chain
 
-```bash
-howedo-verify-conformance artifact.json
-```
-
-See `docs/adapter-conformance-artifact-v1.md` and `docs/adr/ADR-0010-adapter-conformance-artifact-v1.md`.
-
-## Signed conformance attestations
-
-R10 binds an exact R9 artifact to an in-toto Statement v1 and uses Sigstore/Cosign with GitHub Actions OIDC as the reference keyless signing path:
+HOWEDO contains a pre-1.0 engineering chain for:
 
 ```text
-R9 artifact
-    ↓
-in-toto Statement/v1
-    ↓
-HOWEDO semantic verification
-    ↓
-Sigstore keyless signature bundle
-    ↓
-expected workflow identity verification
+adapter conformance
+      ↓
+content-addressed artifact
+      ↓
+in-toto statement
+      ↓
+cryptographic verification
+      ↓
+consumer trust policy
+      ↓
+independent certification replay
+      ↓
+optional TUF trust distribution
+      ↓
+release bundle + SBOM + provenance
 ```
 
-Core-only commands build and verify the semantic binding:
+Reference CLIs include:
 
 ```bash
-howedo-build-attestation artifact.json artifact.intoto.json
-howedo-verify-attestation artifact.json artifact.intoto.json
+howedo-verify-conformance
+howedo-build-attestation
+howedo-verify-attestation
+howedo-verify-sigstore-trust
+howedo-build-certification-package
+howedo-verify-certification-package
+howedo-fetch-consumer-trust-profile
+howedo-build-trust-root-publication
+howedo-verify-trust-root-publication
+howedo-build-release-bundle
+howedo-verify-release-bundle
 ```
 
-See `docs/signed-conformance-attestation-v1.md` and `docs/adr/ADR-0011-signed-conformance-attestation.md`.
+## Repository quality gates
 
-## Attestation trust policy
+The canonical repository uses:
 
-R11 evaluates authenticated R10 evidence against a deterministic consumer policy and emits a standard in-toto Simple Verification Result v0.2:
+- protected `main` and pull-request-based change flow;
+- CODEOWNERS and an evidence-first PR template;
+- Python 3.12/3.13 CI;
+- Ruff and pytest;
+- release-candidate wheel/sdist verification;
+- container build, smoke, provenance, and SBOM workflows;
+- deterministic repository-hygiene checks;
+- explicit [`SECURITY.md`](SECURITY.md) and [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
-```text
-R9 integrity
-AND R10 semantic binding
-AND external crypto verification
-AND HOWEDO trust policy
-        ↓
-ACCEPT / REJECT
-        ↓
-in-toto SVR v0.2
-```
-
-The reference verifier is:
+Run the local baseline:
 
 ```bash
-howedo-verify-sigstore-trust ...
+python -m pip install -e '.[dev,api]'
+ruff check .
+pytest
+python scripts/check_repo_hygiene.py
 ```
 
-The production reference policy accepts only the canonical workflow on `refs/heads/main`; pull requests use a separate test-only policy.
+## Production boundary
 
-See `docs/attestation-trust-policy-v1.md` and `docs/adr/ADR-0012-attestation-trust-policy.md`.
+HOWEDO is **pre-1.0 release-candidate engineering**, not a claim of independently audited
+production trust infrastructure.
 
-## Consumer certification replay
+The repository includes software contracts, verification mechanisms, and operational runbooks.
+Production trust-root activation, public package publication, external security review, and any
+production deployment authority remain separate gates.
 
-R12 lets a relying consumer replay the certification chain independently instead of trusting a producer-generated `ACCEPT` as an oracle:
+See [`docs/RELEASE_READINESS.md`](docs/RELEASE_READINESS.md).
 
-```text
-portable certification package
-        ↓
-consumer trust profile
-        ↓
-file-digest verification
-        ↓
-R9 + R10 replay
-        ↓
-Sigstore verification
-        ↓
-pinned R11 policy identity/digest
-        ↓
-local R11 policy + SVR replay
-        ↓
-R11 SVR signature verification
-        ↓
-ACCEPT / REJECT
-```
+## Documentation map
 
-`howedo.consumer-trust-profile.v1` pins relying-party expectations independently of the package. `howedo.certification-package.v1` is transport/index material over authenticated R9/R10/R11 evidence; it is not a new PKI or a producer-controlled trust root.
-
-See `docs/consumer-certification-v1.md` and `docs/adr/ADR-0013-consumer-certification-replay.md`.
-
-## Trust-root distribution and rotation
-
-R13 removes the need to replace a pinned R12 consumer-profile digest manually forever while preserving an independently bootstrapped trust anchor.
-
-```text
-out-of-band trusted TUF root
-        ↓
-TUF metadata refresh
-        ├── sequential root rotation
-        ├── freshness / expiry checks
-        ├── rollback protection
-        └── target length + hash verification
-        ↓
-verified howedo.consumer-trust-profile.v1 target
-        ↓
-HOWEDO profile validation
-        ↓
-howedo.trust-distribution-receipt.v1
-```
-
-The TUF repository URL is not the trust root. The initial TUF root bytes must arrive through an independently trusted bootstrap channel. HOWEDO records their SHA-256 digest, the final trusted TUF root version, exact target hashes, and resulting consumer-profile digest in the update receipt.
-
-Reference CLI:
-
-```bash
-howedo-fetch-consumer-trust-profile \
-  --bootstrap-root root.json \
-  --metadata-dir .howedo/tuf/metadata \
-  --metadata-base-url https://example.invalid/metadata/ \
-  --target-dir .howedo/tuf/targets \
-  --target-base-url https://example.invalid/targets/ \
-  --profile-output consumer-profile.json \
-  --receipt-output trust-update-receipt.json
-```
-
-HOWEDO does not implement a TUF-like metadata format, repository server, PKI, or key ceremony. TUF remains an optional distribution/rotation substrate.
-
-See `docs/adr/ADR-0014-tuf-trust-root-distribution.md`.
-
-## Production trust-root publication
-
-R14 turns the R13 bootstrap/rotation mechanism into a verifiable public trust-root publication contract without moving production private keys into HOWEDO, GitHub, or CI.
-
-```text
-public TUF root history 1..N
-        ↓
-root v1 self-threshold verification
-        ↓
-N → N+1 old + new threshold verification
-        ↓
-HOWEDO production publication policy
-        ├── minimum root key count / threshold
-        ├── consistent snapshots
-        ├── disjoint top-level role key IDs
-        ├── HTTPS publication endpoints
-        └── minimum remaining root validity
-        ↓
-content-addressed publication manifest
-```
-
-Reference commands:
-
-```bash
-howedo-build-trust-root-publication ...
-howedo-verify-trust-root-publication ...
-```
-
-The R14 software publication mechanism is preserved in the R0-R15 development baseline. **Production activation is separate:** a real production root ceremony, production public root v1, publication endpoints, and production TUF repository are not created by normal HOWEDO CI. No production private root key is generated or stored by this repository workflow.
-
-See `docs/trust-root-publication-v1.md`, `docs/operations/TUF_ROOT_CEREMONY.md`, and `docs/adr/ADR-0015-production-trust-root-publication.md`.
-
-## Distribution and release engineering
-
-R15 turns the Python codebase into a verifiable release candidate while preserving a fail-closed public-publication boundary.
-
-```text
-protected canonical main
-        ↓
-version tag vX.Y.Z
-        ↓
-wheel + sdist build once
-        ↓
-clean wheel installation
-        ↓
-reproducible CycloneDX 1.6 SBOM
-        ↓
-howedo.release-bundle.v1
-        ↓
-GitHub provenance + SBOM attestations
-        ↓
-verified assets attached to DRAFT GitHub Release
-        ↓
-human review + immutable release publication
-        ↓
-optional PyPI OIDC Trusted Publishing
-```
-
-Reference release-bundle commands:
-
-```bash
-howedo-build-release-bundle ...
-howedo-verify-release-bundle release.json --root dist ...
-```
-
-The public release boundary is intentionally separate from R15 software completion. Before the first public HOWEDO release, GitHub release immutability must be enabled, package/license terms must be explicitly decided, the package name must be rechecked immediately before publication, the PyPI Trusted Publisher and protected `pypi` environment must be configured, and `HOWEDO_PYPI_PUBLISH_ENABLED=true` must be intentionally activated. No long-lived PyPI token is part of the design.
-
-See `docs/release-engineering-r15.md` and `docs/adr/ADR-0016-release-engineering.md`.
-
-## Canonical change channel
-
-Canonical `main` is protected by the active repository ruleset **`HOWEDO canonical main protection`** (ruleset id `20928865`). The ruleset has no bypass actors and requires the exact GitHub Actions checks used by the project before merge.
-
-The protected channel requires a pull request, resolved review threads, strict required checks, merge commits, and blocks deletion plus non-fast-forward / force-push updates. `Canonical Channel / provenance` additionally verifies that a resulting `main` head is attributable to a merged PR targeting `main`.
-
-Repository governance is therefore preventive as well as evidence-producing; it is separate from HOWEDO runtime semantics.
-
-See `docs/governance/CANONICAL_CHANNEL_PROTECTION.md`.
-
-## Integrations
-
-**Implemented reference integrations:**
-
-- PostgreSQL — persistence/reference storage adapter.
-- LangGraph OSS — exact checkpoint binding and HOWEDO-gated resume through the public LangGraph API.
-- Temporal OSS — exact workflow-run binding and HOWEDO-gated signal delivery through the public Temporal Python SDK.
-- Sigstore/Cosign — external cryptographic verification for the R10–R12 reference trust flow.
-- The Update Framework (TUF) — optional consumer trust-profile bootstrap, distribution, integrity, freshness, root rotation, and public trust-root publication verification substrate.
-
-The Temporal adapter deliberately binds `namespace + workflow_id + run_id`. A continuation request is never redirected to an unrelated or successor run merely because it shares the same workflow ID. The bound run must still be `RUNNING`, and HOWEDO recovery validity must resolve to `RECOVER`, before the adapter sends the signal.
-
-**Future adapters:** OpenAI, AWS AgentCore, custom Python runtimes, CASER, and V-One.
-
-Adapters never own HOWEDO continuity semantics and are not required dependencies of the core package.
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — scaffold, layers, dependency direction.
+- [`docs/RELEASE_READINESS.md`](docs/RELEASE_READINESS.md) — implemented vs. outstanding gates.
+- [`docs/CONSTITUTION.md`](docs/CONSTITUTION.md) — continuity principles and invariants.
+- [`docs/adr/`](docs/adr/) — architecture decision records.
+- [`docs/operations/`](docs/operations/) — operational trust procedures.
+- [`examples/`](examples/) — integration examples.
 
 ## Canonical invariant
 
-> Persistence tells you what the agent knew. HOWEDO determines whether it is still valid to act on it.
+> **Persistence tells you what the agent knew. HOWEDO determines whether it is still valid to act on it.**

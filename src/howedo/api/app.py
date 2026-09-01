@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
 
+from .cockpit import render_cockpit
 from .models import (
     ContinuityCheckRequest,
     ContinuityCheckResponse,
@@ -11,13 +13,34 @@ from .models import (
 )
 from .service import check_continuity, check_recovery
 
+_COCKPIT_HEADERS = {
+    "Content-Security-Policy": (
+        "default-src 'none'; "
+        "style-src 'unsafe-inline'; "
+        "script-src 'unsafe-inline'; "
+        "connect-src 'self'; "
+        "img-src 'self' data:; "
+        "base-uri 'none'; "
+        "form-action 'none'; "
+        "frame-ancestors 'none'"
+    ),
+    "Referrer-Policy": "no-referrer",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+}
+
 
 def create_app() -> FastAPI:
     app = FastAPI(
         title="HOWEDO",
         version="v1",
-        description="Deployable API boundary for the HOWEDO continuity kernel.",
+        description="Deployable API and cockpit boundary for the HOWEDO continuity kernel.",
     )
+
+    @app.get("/", response_class=HTMLResponse, include_in_schema=False)
+    @app.get("/cockpit", response_class=HTMLResponse, include_in_schema=False)
+    def cockpit() -> HTMLResponse:
+        return HTMLResponse(content=render_cockpit(), headers=_COCKPIT_HEADERS)
 
     @app.get(
         "/health",

@@ -14,9 +14,11 @@ dependencies = []
 
 [project.urls]
 Repository = "https://github.com/eimyroot/HOWEDO"
+Documentation = "https://github.com/eimyroot/HOWEDO/blob/main/docs/ARCHITECTURE.md"
 Issues = "https://github.com/eimyroot/HOWEDO/issues"
 
 [project.scripts]
+howedo-cockpit = "howedo.api.cli:main"
 howedo-verify-conformance = "howedo.certification_cli:main"
 howedo-build-attestation = "howedo.attestation_cli:build_main"
 howedo-verify-attestation = "howedo.attestation_cli:verify_main"
