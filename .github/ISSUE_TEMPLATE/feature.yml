@@ -1,0 +1,40 @@
+name: Feature request
+description: Propose a bounded capability or integration
+title: "feat: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / operational need
+      description: Describe the continuity or integration problem, not only the desired implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed capability
+    validations:
+      required: true
+  - type: textarea
+    id: invariants
+    attributes:
+      label: Trust and continuity invariants
+      description: Which fail-closed, evidence, protocol, or adapter boundaries must remain unchanged?
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Acceptance evidence
+      description: State the tests, conformance evidence, or observable behavior that would prove completion.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched existing issues and ADRs for this capability.
+          required: true
