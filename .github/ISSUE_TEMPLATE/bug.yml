@@ -1,0 +1,68 @@
+name: Bug report
+description: Report a reproducible HOWEDO defect
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve HOWEDO. Do not include secrets or security-sensitive exploit details here; follow SECURITY.md for vulnerabilities.
+  - type: input
+    id: version
+    attributes:
+      label: HOWEDO version or commit
+      placeholder: tag, package version, or git SHA
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Affected surface
+      options:
+        - Continuity kernel
+        - API / cockpit
+        - PostgreSQL adapter
+        - LangGraph adapter
+        - Temporal adapter
+        - Trust / attestation
+        - Packaging / container
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include deterministic steps, commands, and sanitized evidence.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: OS, Python version, runtime/integration versions
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched existing issues.
+          required: true
+        - label: I removed credentials, tokens, private keys, and sensitive data.
+          required: true
+        - label: This is not a vulnerability disclosure.
+          required: true

@@ -6,7 +6,10 @@
 
 [![CI](https://github.com/eimyroot/HOWEDO/actions/workflows/ci.yml/badge.svg)](https://github.com/eimyroot/HOWEDO/actions/workflows/ci.yml)
 [![Container](https://github.com/eimyroot/HOWEDO/actions/workflows/container.yml/badge.svg)](https://github.com/eimyroot/HOWEDO/actions/workflows/container.yml)
+[![Conformance](https://github.com/eimyroot/HOWEDO/actions/workflows/consolidation.yml/badge.svg)](https://github.com/eimyroot/HOWEDO/actions/workflows/consolidation.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-78ffd6)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.12%20%7C%203.13-78ffd6)](pyproject.toml)
+[![Status](https://img.shields.io/badge/status-pre--1.0%20engineering%20RC-f4b860)](docs/RELEASE_READINESS.md)
 
 HOWEDO answers one operational question:
 
@@ -14,6 +17,8 @@ HOWEDO answers one operational question:
 
 Persistence can restore what an agent knew. HOWEDO evaluates whether that state, its dependencies,
 its semantic assumptions, concurrent-write fences, and recovery binding are still valid **now**.
+
+**Start here:** [Architecture](docs/ARCHITECTURE.md) · [Release readiness](docs/RELEASE_READINESS.md) · [Security](SECURITY.md) · [Contributing](CONTRIBUTING.md) · [Governance](GOVERNANCE.md) · [Changelog](CHANGELOG.md) · [Support](SUPPORT.md)
 
 ## Operator cockpit
 
@@ -33,11 +38,7 @@ or runtime control. It calls the same public API that external consumers use.
 docker compose up --build
 ```
 
-Then open:
-
-```text
-http://127.0.0.1:8000/
-```
+Then open `http://127.0.0.1:8000/`.
 
 ### Run from Python
 
@@ -54,7 +55,7 @@ Use a non-loopback bind only when you intentionally want to expose the service:
 howedo-cockpit --host 0.0.0.0 --port 8000
 ```
 
-Health and API documentation:
+Health and API surface:
 
 ```text
 GET  /health
@@ -106,9 +107,7 @@ Every continuity evaluation resolves to one of five actions:
 ```
 
 The architecture rule is strict: **adapters and presentation may invoke HOWEDO semantics; they do
-not redefine them.**
-
-Detailed scaffold and dependency-direction rules are in
+not redefine them.** Detailed scaffold and dependency-direction rules are in
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Core subsystems
@@ -238,12 +237,13 @@ The canonical repository uses:
 
 - protected `main` and pull-request-based change flow;
 - CODEOWNERS and an evidence-first PR template;
+- structured bug/feature issue intake;
 - Python 3.12/3.13 CI;
 - Ruff and pytest;
 - release-candidate wheel/sdist verification;
 - container build, smoke, provenance, and SBOM workflows;
 - deterministic repository-hygiene checks;
-- explicit [`SECURITY.md`](SECURITY.md) and [`CONTRIBUTING.md`](CONTRIBUTING.md).
+- explicit security, support, governance, contribution, and change-history contracts.
 
 Run the local baseline:
 
@@ -267,12 +267,19 @@ See [`docs/RELEASE_READINESS.md`](docs/RELEASE_READINESS.md).
 
 ## Documentation map
 
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — scaffold, layers, dependency direction.
-- [`docs/RELEASE_READINESS.md`](docs/RELEASE_READINESS.md) — implemented vs. outstanding gates.
-- [`docs/CONSTITUTION.md`](docs/CONSTITUTION.md) — continuity principles and invariants.
-- [`docs/adr/`](docs/adr/) — architecture decision records.
-- [`docs/operations/`](docs/operations/) — operational trust procedures.
-- [`examples/`](examples/) — integration examples.
+| Area | Canonical document |
+| --- | --- |
+| Architecture | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
+| Release truth | [`docs/RELEASE_READINESS.md`](docs/RELEASE_READINESS.md) |
+| Continuity principles | [`docs/CONSTITUTION.md`](docs/CONSTITUTION.md) |
+| Architecture decisions | [`docs/adr/`](docs/adr/) |
+| Operations | [`docs/operations/`](docs/operations/) |
+| Integration examples | [`examples/`](examples/) |
+| Security | [`SECURITY.md`](SECURITY.md) |
+| Contribution workflow | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
+| Governance | [`GOVERNANCE.md`](GOVERNANCE.md) |
+| Support | [`SUPPORT.md`](SUPPORT.md) |
+| Change history | [`CHANGELOG.md`](CHANGELOG.md) |
 
 ## Canonical invariant
 
